@@ -332,11 +332,11 @@ export default function Result() {
               </div>
 
               {/* Refresh button */}
-            <button
+            <button className='mb-5'
               onClick={handleRefresh}
               disabled={!canRefresh(topic) || refreshing}
               style={{
-                padding: '6px 16px', borderRadius: 99, cursor: canRefresh(topic) ? 'pointer' : 'not-allowed',
+                padding: '6px 16px ', borderRadius: 99, cursor: canRefresh(topic) ? 'pointer' : 'not-allowed',
                 background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
                 fontFamily: 'DM Sans', fontSize: '0.78rem',
                 color: canRefresh(topic) ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',

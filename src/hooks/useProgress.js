@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 
 // Standalone progress storage — doesn't depend on roadmap existing
-function progressKey(topic) {
-    return `progress__${topic.toLowerCase().trim().replace(/\s+/g, '_')}`
+function progressKey(id) {
+    return `progress__${id.toLowerCase().trim().replace(/\s+/g, '_')}`
 }
 
 function loadProgress(topic) {
