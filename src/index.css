@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  background: #080810;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(96,165,250,0.25); border-radius: 4px; }
+
+/* ── Glass ── */
+.glass {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+}
+
+.glass-sm {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 14px;
+}
+
+/* ── Gradient text ── */
+.g-blue  { background: linear-gradient(135deg,#60A5FA,#818CF8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.g-purple{ background: linear-gradient(135deg,#A78BFA,#EC4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.g-teal  { background: linear-gradient(135deg,#2DD4BF,#60A5FA); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.g-gold  { background: linear-gradient(135deg,#F59E0B,#EF4444); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+/* ── Buttons ── */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg,#3B82F6,#8B5CF6);
+  color: #fff; border: none; border-radius: 12px;
+  padding: 12px 28px; font-family: 'Space Grotesk',sans-serif;
+  font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  transition: all 0.25s ease;
+}
+.btn-primary:hover {
+  opacity: 0.88; transform: translateY(-1px);
+  box-shadow: 0 0 28px rgba(59,130,246,0.45);
+}
+
+/* ── Search input ── */
+.search-wrap { position: relative; width: 100%; max-width: 620px; }
+.search-input {
+  width: 100%; padding: 18px 160px 18px 56px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px; color: #fff;
+  font-family: 'DM Sans',sans-serif; font-size: 1rem;
+  outline: none; transition: all 0.3s ease;
+}
+.search-input::placeholder { color: rgba(255,255,255,0.28); }
+.search-input:focus {
+  border-color: rgba(96,165,250,0.5);
+  background: rgba(255,255,255,0.07);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12), 0 0 40px rgba(59,130,246,0.1);
+}
+
+/* ── Phase card ── */
+.phase-card {
+  border-radius: 20px; overflow: hidden; margin-bottom: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: border-color 0.3s ease;
+}
+.phase-card:hover { border-color: rgba(96,165,250,0.2); }
+
+.phase-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 28px; cursor: pointer; user-select: none;
+  background: none; border: none; width: 100%; text-align: left;
+}
+
+.topic-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; border-radius: 12px; margin-bottom: 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  text-decoration: none; color: rgba(255,255,255,0.75);
+  font-family: 'DM Sans',sans-serif; font-size: 0.88rem;
+  transition: all 0.2s ease; cursor: pointer;
+}
+.topic-link:hover {
+  background: rgba(96,165,250,0.08);
+  border-color: rgba(96,165,250,0.25);
+  color: #fff;
+  transform: translateX(4px);
+}
+
+/* ── Career card ── */
+.career-card {
+  border-radius: 20px; padding: 28px 24px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer; transition: all 0.3s ease;
+  position: relative; overflow: hidden;
+}
+.career-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(139,92,246,0.06));
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.career-card:hover { border-color: rgba(96,165,250,0.35); transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.career-card:hover::before { opacity: 1; }
+
+/* ── iPhone sheet overlay ── */
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+.sheet-page {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 101;
+  background: #0E0E1A;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 28px 28px 0 0;
+  max-height: 88vh;
+  overflow-y: auto;
+  animation: slideUp 0.4s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%) }
+  to   { transform: translateY(0) }
+}
+
+.sheet-handle {
+  width: 40px; height: 5px; border-radius: 99px;
+  background: rgba(255,255,255,0.15);
+  margin: 14px auto 0;
+}
+
+/* ── Skeleton ── */
+@keyframes shimmer {
+  0%   { background-position: -800px 0 }
+  100% { background-position:  800px 0 }
+}
+.skeleton {
+  background: linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 10px;
+}
+
+/* ── Fade up ── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(22px) }
+  to   { opacity:1; transform:translateY(0) }
+}
+.fu  { animation: fadeUp 0.5s ease both }
+.fu1 { animation: fadeUp 0.5s 0.08s ease both }
+.fu2 { animation: fadeUp 0.5s 0.16s ease both }
+.fu3 { animation: fadeUp 0.5s 0.24s ease both }
+.fu4 { animation: fadeUp 0.5s 0.32s ease both }
+.fu5 { animation: fadeUp 0.5s 0.40s ease both }
+
+/* ── Neural canvas ── */
+#neural {
+  position: fixed; top:0; left:0;
+  width:100%; height:100%;
+  pointer-events:none; z-index:0; opacity:0.13;
+}
+
+/* ── Tag pills ── */
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 99px; font-size: 0.75rem;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 500;
+}

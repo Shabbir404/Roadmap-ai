@@ -1,0 +1,13 @@
+# Ignore environment variables (API keys, secrets)
+.env
+
+# Ignore external dependencies (massive folders downloaded by npm)
+node_modules/
+
+# Ignore local build outputs (if you run a build command later)
+dist/
+build/
+
+# Ignore OS-specific system files
+.DS_Store
+Thumbs.db
