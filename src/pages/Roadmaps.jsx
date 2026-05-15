@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAllRoadmaps, deleteRoadmap, timeAgo } from '../utils/storage.js'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
+import { getAllRoadmaps, deleteRoadmap, timeAgo, getStandaloneProgress } from '../utils/storage.js'
 
 export default function Roadmaps() {
     const [roadmaps, setRoadmaps] = useState([])
@@ -183,6 +183,7 @@ export default function Roadmaps() {
                     })}
                 </div>
             </div>
+            <Footer />
         </div>
     )
 }

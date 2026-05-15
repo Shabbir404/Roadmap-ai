@@ -1,3 +1,4 @@
+import { saveCareerRoadmap, getCareerRoadmap } from '../utils/storage.js'
 import { useState, useEffect } from 'react'
 import { generateCareerRoadmap } from '../utils/ai.js'
 
@@ -88,8 +89,17 @@ export default function CareerSheet({ career, topic, onClose }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Check cache first
+    const cached = getCareerRoadmap(topic, career.title)
+    if (cached) {
+      setData(cached.data)
+      setLoading(false)
+      return
+    }
+    // Not cached — generate and save
     generateCareerRoadmap(topic, career.title).then(d => {
       setData(d)
+      saveCareerRoadmap(topic, career.title, d)
       setLoading(false)
     })
   }, [topic, career.title])

@@ -39,26 +39,42 @@ export default function Result() {
   const [refreshing, setRefreshing] = useState(false)
   const { toasts, showToast } = useToast()
   const { toggle, isTopicDone, doneCount, totalTopics, percent, phaseProgress, reset } = useProgress(topic, data?.phases)
+  const [search, setSearch] = useState('')
+  const isReadOnly = params.get('shared') === 'true'
 
   useEffect(() => {
     if (!topic) return
     setLoading(true)
     setData(null)
 
+    const sharedData = params.get('data')
+    if (sharedData) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(atob(sharedData)))
+        setData(decoded)
+        setFromCache(false)
+        setLoading(false)
+        return
+      } catch {
+        // if decode fails fall through to normal load
+      }
+    }
+
     const cached = getRoadmap(topic)
     if (cached) {
-      // load from cache instantly
       setData(cached.data)
       setFromCache(true)
       setCachedAt(cached.lastGeneratedAt)
       setLoading(false)
+      showToast('⚡ Loaded from cache', 'info')
     } else {
-      // call API
       generateResult(topic).then(d => {
         setData(d)
         saveRoadmap(topic, d)
         setFromCache(false)
+        setCachedAt(Date.now())
         setLoading(false)
+        showToast('✨ Roadmap saved to your library', 'success')
       })
     }
   }, [topic])
@@ -66,6 +82,18 @@ export default function Result() {
   function openCareer(career) {
     setSelectedCareer(career)
     setPageScaled(true)
+  }
+
+  function handleShare() {
+    try {
+      const payload = JSON.stringify(data)
+      const encoded = btoa(encodeURIComponent(payload))
+      const url = `${window.location.origin}/result?topic=${encodeURIComponent(topic)}&shared=true&data=${encoded}`
+      navigator.clipboard.writeText(url)
+      showToast('🔗 Share link copied! Anyone with this link sees your exact roadmap.', 'success')
+    } catch {
+      showToast('Failed to copy link', 'warn')
+    }
   }
 
   function closeCareer() {
@@ -184,6 +212,41 @@ export default function Result() {
           overflow: pageScaled ? 'hidden' : 'visible',
         }}
       >
+        {/* Read-only watermark banner */}
+        {isReadOnly && (
+          <div style={{
+            position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 200, display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 24px', borderRadius: 99,
+            background: 'rgba(8,8,16,0.95)',
+            border: '1px solid rgba(96,165,250,0.3)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          }}>
+            <span style={{ fontSize: 16 }}>🧭</span>
+            <span style={{ fontFamily: 'DM Sans', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
+              Made with
+            </span>
+            <span style={{
+              fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '0.9rem',
+              background: 'linear-gradient(135deg,#60A5FA,#A78BFA)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>Path AI</span>
+            <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
+            <button
+              onClick={() => window.open('/', '_blank')}
+              style={{
+                background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                border: 'none', borderRadius: 8, cursor: 'pointer',
+                padding: '5px 14px', fontFamily: 'Space Grotesk',
+                fontSize: '0.78rem', fontWeight: 600, color: 'white',
+              }}
+            >
+              Create yours →
+            </button>
+          </div>
+        )}
+
         {loading ? <LoadingScreen topic={topic} /> : data ? (
           <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 24px 80px' }}>
 
@@ -262,93 +325,174 @@ export default function Result() {
             </div>
 
             {/* Overall Progress */}
-            {totalTopics > 0 && (
-              <div style={{
-                padding: '18px 22px', borderRadius: 16, marginBottom: 28,
-                background: percent === 100 ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${percent === 100 ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                transition: 'all 0.4s ease',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 16 }}>{percent === 100 ? '🎉' : '📈'}</span>
-                    <div>
-                      <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '0.9rem', color: percent === 100 ? '#10B981' : 'rgba(255,255,255,0.85)' }}>
-                        {percent === 100 ? 'Roadmap Complete!' : 'Your Progress'}
-                      </div>
-                      <div style={{ fontFamily: 'DM Sans', fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>
-                        {doneCount} of {totalTopics} topics completed
+            {!isReadOnly && (
+              <button onClick={handleRefresh}>
+                <div style={{
+                  padding: '18px 22px', borderRadius: 16, marginBottom: 28,
+                  background: percent === 100 ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${percent === 100 ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                  transition: 'all 0.4s ease',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 16 }}>{percent === 100 ? '🎉' : '📈'}</span>
+                      <div>
+                        <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '0.9rem', color: percent === 100 ? '#10B981' : 'rgba(255,255,255,0.85)' }}>
+                          {percent === 100 ? 'Roadmap Complete!' : 'Your Progress'}
+                        </div>
+                        <div style={{ fontFamily: 'DM Sans', fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>
+                          {doneCount} of {totalTopics} topics completed
+                        </div>
                       </div>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.3rem', color: percent === 100 ? '#10B981' : '#60A5FA' }}>
+                        {percent}%
+                      </span>
+                      {doneCount > 0 && (
+                        <button
+                          onClick={reset}
+                          style={{
+                            padding: '3px 10px', borderRadius: 8, cursor: 'pointer',
+                            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                            fontFamily: 'DM Sans', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.3rem', color: percent === 100 ? '#10B981' : '#60A5FA' }}>
-                      {percent}%
-                    </span>
-                    {doneCount > 0 && (
-                      <button
-                        onClick={reset}
-                        style={{
-                          padding: '3px 10px', borderRadius: 8, cursor: 'pointer',
-                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                          fontFamily: 'DM Sans', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)',
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
-                      >
-                        Reset
-                      </button>
-                    )}
+                  <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', borderRadius: 99,
+                      width: `${percent}%`,
+                      background: percent === 100 ? 'linear-gradient(90deg,#10B981,#34D399)' : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
+                      boxShadow: percent === 100 ? '0 0 10px rgba(16,185,129,0.5)' : '0 0 10px rgba(59,130,246,0.4)',
+                      transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)',
+                    }} />
                   </div>
+                  {percent === 100 && (
+                    <div style={{ textAlign: 'center', marginTop: 10, fontFamily: 'DM Sans', fontSize: '0.82rem', color: 'rgba(16,185,129,0.7)' }}>
+                      🚀 Now pick a career path below and go deeper!
+                    </div>
+                  )}
                 </div>
-                <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 99,
-                    width: `${percent}%`,
-                    background: percent === 100 ? 'linear-gradient(90deg,#10B981,#34D399)' : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
-                    boxShadow: percent === 100 ? '0 0 10px rgba(16,185,129,0.5)' : '0 0 10px rgba(59,130,246,0.4)',
-                    transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)',
-                  }} />
-                </div>
-                {percent === 100 && (
-                  <div style={{ textAlign: 'center', marginTop: 10, fontFamily: 'DM Sans', fontSize: '0.82rem', color: 'rgba(16,185,129,0.7)' }}>
-                    🚀 Now pick a career path below and go deeper!
-                  </div>
-                )}
-              </div>
+              </button>
             )}
 
 
             {/* ── Phases ── */}
             <div className="fu1" style={{ marginBottom: 64 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-                <span style={{ fontSize: 20 }}>🗺️</span>
-                <h2 style={{
-                  fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.25rem',
-                  color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em',
-                }}>
-                  Your Roadmap
-                </h2>
-                <span style={{
-                  padding: '3px 12px', borderRadius: 99, fontSize: '0.75rem',
-                  background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.2)',
-                  color: '#60A5FA', fontFamily: 'Space Grotesk',
-                }}>
-                  {data.phases?.length} Phases
-                </span>
+              {/* Roadmap header with search */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 20 }}>🗺️</span>
+                    <h2 style={{
+                      fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.25rem',
+                      color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em',
+                    }}>Your Roadmap</h2>
+                    <span style={{
+                      padding: '3px 12px', borderRadius: 99, fontSize: '0.75rem',
+                      background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.2)',
+                      color: '#60A5FA', fontFamily: 'Space Grotesk',
+                    }}>{data.phases?.length} Phases</span>
+                  </div>
+
+                  {/* Share button */}
+                  {!isReadOnly && (
+                    <button
+                      onClick={handleShare}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 7,
+                        padding: '8px 16px', borderRadius: 10, cursor: 'pointer',
+                        background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)',
+                        fontFamily: 'Space Grotesk', fontSize: '0.8rem', fontWeight: 500, color: '#60A5FA',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.15)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.08)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.2)' }}
+                    >
+                      🔗 Share Roadmap
+                    </button>
+                  )}
+                </div>
+
+                {/* Search inside roadmap */}
+                <div style={{ position: 'relative' }}>
+                  <span style={{
+                    position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                    fontSize: 14, color: 'rgba(255,255,255,0.25)', pointerEvents: 'none',
+                  }}>🔍</span>
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search topics..."
+                    style={{
+                      width: '100%', padding: '10px 16px 10px 38px',
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 12, color: 'rgba(255,255,255,0.8)',
+                      fontFamily: 'DM Sans', fontSize: '0.88rem', outline: 'none',
+                      transition: 'all 0.2s',
+                    }}
+                    onFocus={e => { e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                    onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                  />
+                  {search && (
+                    <button
+                      onClick={() => setSearch('')}
+                      style={{
+                        position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'rgba(255,255,255,0.3)', fontSize: 14,
+                      }}
+                    >✕</button>
+                  )}
+                  {search && (
+                    <div style={{
+                      fontFamily: 'DM Sans', fontSize: '0.8rem',
+                      color: 'rgba(255,255,255,0.3)', marginBottom: 16, marginTop: -8,
+                    }}>
+                      {data.phases.reduce((sum, p) =>
+                        sum + p.topics.filter(t =>
+                          t.title.toLowerCase().includes(search.toLowerCase()) ||
+                          t.description?.toLowerCase().includes(search.toLowerCase())
+                        ).length, 0
+                      )} topics found for "{search}"
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {(data.phases || []).map((phase, i) => (
-                <PhaseCard
-                  key={phase.id}
-                  phase={phase}
-                  topic={data.topic}
-                  index={i}
-                  isTopicDone={isTopicDone}
-                  onToggle={toggle}
-                  phaseProgress={phaseProgress}
-                />
-              ))}
+              {(data.phases || [])
+                .map(phase => {
+                  // filter topics by search keyword
+                  if (!search.trim()) return phase
+                  const filtered = phase.topics.filter(t =>
+                    t.title.toLowerCase().includes(search.toLowerCase()) ||
+                    t.description?.toLowerCase().includes(search.toLowerCase())
+                  )
+                  if (filtered.length === 0) return null
+                  return { ...phase, topics: filtered }
+                })
+                .filter(Boolean)
+                .map((phase, i) => (
+                  <PhaseCard
+                    key={phase.id}
+                    phase={phase}
+                    topic={data.topic}
+                    index={i}
+                    isTopicDone={isTopicDone}
+                    onToggle={toggle}
+                    phaseProgress={phaseProgress}
+                  />
+                ))
+              }
             </div>
 
             {/* ── Career Paths ── */}
@@ -385,15 +529,17 @@ export default function Result() {
       </div>
 
       {/* ── iPhone sheet ── */}
-      {selectedCareer && (
-        <CareerSheet
-          career={selectedCareer}
-          topic={data?.topic || topic}
-          onClose={closeCareer}
-        />
-      )}
+      {
+        selectedCareer && (
+          <CareerSheet
+            career={selectedCareer}
+            topic={data?.topic || topic}
+            onClose={closeCareer}
+          />
+        )
+      }
       <ToastContainer toasts={toasts} />
 
-    </div>
+    </div >
   )
 }

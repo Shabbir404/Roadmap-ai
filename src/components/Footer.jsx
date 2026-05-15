@@ -67,21 +67,6 @@ export default function Footer() {
                             ))}
                         </div>
 
-                        <div>
-                            <div style={{
-                                fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: '0.8rem',
-                                color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase',
-                                letterSpacing: '0.1em', marginBottom: 16,
-                            }}>Tech Stack</div>
-                            {['React + Vite', 'Gemini AI', 'Tailwind CSS', 'React Router'].map(tech => (
-                                <div key={tech} style={{ marginBottom: 10 }}>
-                                    <span style={{
-                                        fontFamily: 'DM Sans', fontSize: '0.88rem',
-                                        color: 'rgba(255,255,255,0.28)',
-                                    }}>{tech}</span>
-                                </div>
-                            ))}
-                        </div>
                     </div>
                 </div>
 
@@ -97,7 +82,7 @@ export default function Footer() {
                         fontFamily: 'DM Sans', fontSize: '0.82rem',
                         color: 'rgba(255,255,255,0.2)',
                     }}>
-                        © 2025 Path AI. Built with ❤️ for learners everywhere.
+                        © 2026 Path AI. Built with ❤️ for learners everywhere.
                     </div>
 
                     {/* Developer card */}

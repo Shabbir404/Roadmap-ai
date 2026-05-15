@@ -1,31 +1,37 @@
 // ─── Keys ─────────────────────────────────────────────────
 function roadmapKey(topic) {
-    return `roadmap__${topic.toLowerCase().replace(/\s+/g, '_')}`
+    return `roadmap__${topic.toLowerCase().trim().replace(/\s+/g, '_')}`
 }
 
-const INDEX_KEY = 'roadmap__index' // list of all saved topics
-
-// ─── Index (list of all saved roadmaps) ───────────────────
-function getIndex() {
-    try {
-        return JSON.parse(localStorage.getItem(INDEX_KEY)) || []
-    } catch { return [] }
+function careerKey(topic, career) {
+    return `career__${topic.toLowerCase().trim().replace(/\s+/g, '_')}__${career.toLowerCase().trim().replace(/\s+/g, '_')}`
 }
 
-function addToIndex(topic) {
-    const index = getIndex()
-    if (!index.includes(topic)) {
-        index.push(topic)
-        localStorage.setItem(INDEX_KEY, JSON.stringify(index))
+
+
+const INDEX_KEY = 'roadmap__index'
+const CAREER_INDEX_KEY = 'career__index'
+
+// ─── Index helpers ─────────────────────────────────────────
+function getIndex(key) {
+    try { return JSON.parse(localStorage.getItem(key)) || [] }
+    catch { return [] }
+}
+
+function addToIndex(indexKey, value) {
+    const index = getIndex(indexKey)
+    if (!index.includes(value)) {
+        index.push(value)
+        localStorage.setItem(indexKey, JSON.stringify(index))
     }
 }
 
-function removeFromIndex(topic) {
-    const index = getIndex().filter(t => t !== topic)
-    localStorage.setItem(INDEX_KEY, JSON.stringify(index))
+function removeFromIndex(indexKey, value) {
+    const index = getIndex(indexKey).filter(v => v !== value)
+    localStorage.setItem(indexKey, JSON.stringify(index))
 }
 
-// ─── Save ─────────────────────────────────────────────────
+// ─── Roadmap save/get/delete ───────────────────────────────
 export function saveRoadmap(topic, data) {
     const key = roadmapKey(topic)
     const existing = getRoadmap(topic)
@@ -37,10 +43,9 @@ export function saveRoadmap(topic, data) {
         progress: existing?.progress || {},
     }
     localStorage.setItem(key, JSON.stringify(entry))
-    addToIndex(topic)
+    addToIndex(INDEX_KEY, topic)
 }
 
-// ─── Get one ──────────────────────────────────────────────
 export function getRoadmap(topic) {
     try {
         const raw = localStorage.getItem(roadmapKey(topic))
@@ -48,31 +53,65 @@ export function getRoadmap(topic) {
     } catch { return null }
 }
 
-// ─── Get all ──────────────────────────────────────────────
 export function getAllRoadmaps() {
-    return getIndex().map(topic => getRoadmap(topic)).filter(Boolean)
+    return getIndex(INDEX_KEY)
+        .map(topic => {
+            const rm = getRoadmap(topic)
+            if (!rm) return null
+            // Read progress from standalone key so it stays in sync
+            const progress = getStandaloneProgress(topic)
+            return { ...rm, progress }
+        })
+        .filter(Boolean)
 }
 
-// ─── Delete ───────────────────────────────────────────────
 export function deleteRoadmap(topic) {
     localStorage.removeItem(roadmapKey(topic))
-    removeFromIndex(topic)
+    removeFromIndex(INDEX_KEY, topic)
+    // also delete all career caches for this topic
+    getIndex(CAREER_INDEX_KEY)
+        .filter(k => k.startsWith(topic.toLowerCase().trim().replace(/\s+/g, '_')))
+        .forEach(k => {
+            localStorage.removeItem(`career__${k}`)
+            removeFromIndex(CAREER_INDEX_KEY, k)
+        })
 }
 
-// ─── Progress ─────────────────────────────────────────────
+// ─── Progress ──────────────────────────────────────────────
 export function saveProgress(topic, progress) {
-    const entry = getRoadmap(topic)
-    if (!entry) return
-    entry.progress = progress
-    localStorage.setItem(roadmapKey(topic), JSON.stringify(entry))
+    try {
+        const key = roadmapKey(topic)
+        const raw = localStorage.getItem(key)
+        if (!raw) return
+        const entry = JSON.parse(raw)
+        entry.progress = progress
+        localStorage.setItem(key, JSON.stringify(entry))
+    } catch { }
 }
 
 export function getProgress(topic) {
-    return getRoadmap(topic)?.progress || {}
+    try {
+        return getRoadmap(topic)?.progress || {}
+    } catch { return {} }
 }
 
-// ─── 24hr cooldown check ──────────────────────────────────
-const COOLDOWN_MS = 24 * 60 * 60 * 1000 // 24 hours
+// ─── Career roadmap cache ──────────────────────────────────
+export function saveCareerRoadmap(topic, career, data) {
+    const key = careerKey(topic, career)
+    const entry = { topic, career, data, savedAt: Date.now() }
+    localStorage.setItem(key, JSON.stringify(entry))
+    addToIndex(CAREER_INDEX_KEY, `${topic.toLowerCase().trim().replace(/\s+/g, '_')}__${career.toLowerCase().trim().replace(/\s+/g, '_')}`)
+}
+
+export function getCareerRoadmap(topic, career) {
+    try {
+        const raw = localStorage.getItem(careerKey(topic, career))
+        return raw ? JSON.parse(raw) : null
+    } catch { return null }
+}
+
+// ─── 24hr cooldown ─────────────────────────────────────────
+const COOLDOWN_MS = 24 * 60 * 60 * 1000
 
 export function canRefresh(topic) {
     const entry = getRoadmap(topic)
@@ -90,7 +129,7 @@ export function timeUntilRefresh(topic) {
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
 }
 
-// ─── Human readable date ──────────────────────────────────
+// ─── Time helper ───────────────────────────────────────────
 export function timeAgo(timestamp) {
     const diff = Date.now() - timestamp
     const mins = Math.floor(diff / 60000)
@@ -100,4 +139,15 @@ export function timeAgo(timestamp) {
     if (mins < 60) return `${mins} min ago`
     if (hours < 24) return `${hours}h ago`
     return `${days}d ago`
+}
+// ─── Standalone progress (used by useProgress hook) ────────
+function progressKey(topic) {
+    return `progress__${topic.toLowerCase().trim().replace(/\s+/g, '_')}`
+}
+
+export function getStandaloneProgress(topic) {
+    try {
+        const raw = localStorage.getItem(progressKey(topic))
+        return raw ? JSON.parse(raw) : {}
+    } catch { return {} }
 }
