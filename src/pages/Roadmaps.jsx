@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
@@ -6,6 +6,29 @@ import { getAllRoadmaps, deleteRoadmap, timeAgo, getStandaloneProgress } from '.
 
 export default function Roadmaps() {
     const [roadmaps, setRoadmaps] = useState([])
+    // Compute stats from all roadmaps
+    const stats = useMemo(() => {
+        const totalRoadmaps = roadmaps.length
+        const totalTopics = roadmaps.reduce((sum, rm) =>
+            sum + (rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0), 0)
+        const completedTopics = roadmaps.reduce((sum, rm) => {
+            const progress = getStandaloneProgress(rm.topic)
+            return sum + Object.keys(progress).length
+        }, 0)
+        const bestRoadmap = roadmaps.reduce((best, rm) => {
+            const total = rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0
+            const done = Object.keys(getStandaloneProgress(rm.topic)).length
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0
+            return pct > (best.pct || 0) ? { topic: rm.topic, pct } : best
+        }, {})
+        const completedRoadmaps = roadmaps.filter(rm => {
+            const total = rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0
+            const done = Object.keys(getStandaloneProgress(rm.topic)).length
+            return total > 0 && done === total
+        }).length
+
+        return { totalRoadmaps, totalTopics, completedTopics, bestRoadmap, completedRoadmaps }
+    }, [roadmaps])
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -57,6 +80,22 @@ export default function Roadmaps() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         fontFamily: 'DM Sans', fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)',
                     }}>Roadmaps</button>
+                    {roadmaps.length > 0 && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '6px 14px', borderRadius: 99,
+                            background: 'rgba(16,185,129,0.08)',
+                            border: '1px solid rgba(16,185,129,0.2)',
+                        }}>
+                            <span style={{ fontSize: 13 }}>✅</span>
+                            <span style={{
+                                fontFamily: 'Space Grotesk', fontWeight: 600,
+                                fontSize: '0.78rem', color: '#10B981',
+                            }}>
+                                {stats.completedTopics} topics done
+                            </span>
+                        </div>
+                    )}
                 </div>
             </nav>
 
@@ -77,22 +116,73 @@ export default function Roadmaps() {
                 </div>
 
                 {/* Empty state */}
-                {roadmaps.length === 0 && (
-                    <div className="fu1" style={{
-                        textAlign: 'center', padding: '80px 40px',
-                        background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
-                        borderRadius: 24,
+                {/* Stats section */}
+                {roadmaps.length > 0 && (
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                        gap: 12, marginBottom: 40,
                     }}>
-                        <div style={{ fontSize: 48, marginBottom: 16 }}>🗺️</div>
-                        <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: '1.1rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
-                            No saved roadmaps yet
-                        </div>
-                        <p style={{ fontFamily: 'DM Sans', fontSize: '0.88rem', color: 'rgba(255,255,255,0.25)', marginBottom: 24 }}>
-                            Generate a roadmap and it auto-saves here
-                        </p>
-                        <button className="btn-primary" onClick={() => navigate('/')}>
-                            ✦ Generate Your First Roadmap
-                        </button>
+                        {[
+                            {
+                                icon: '🗺️',
+                                value: stats.totalRoadmaps,
+                                label: 'Roadmaps Saved',
+                                color: '#3B82F6',
+                            },
+                            {
+                                icon: '✅',
+                                value: stats.completedTopics,
+                                label: 'Topics Completed',
+                                color: '#10B981',
+                            },
+                            {
+                                icon: '🎯',
+                                value: `${stats.totalTopics > 0 ? Math.round((stats.completedTopics / stats.totalTopics) * 100) : 0}%`,
+                                label: 'Overall Progress',
+                                color: '#8B5CF6',
+                            },
+                            {
+                                icon: '🏆',
+                                value: stats.completedRoadmaps,
+                                label: 'Completed',
+                                color: '#F59E0B',
+                            },
+                            {
+                                icon: '🔥',
+                                value: stats.bestRoadmap.topic
+                                    ? `${stats.bestRoadmap.pct}%`
+                                    : '—',
+                                label: stats.bestRoadmap.topic
+                                    ? `Best: ${stats.bestRoadmap.topic}`
+                                    : 'No progress yet',
+                                color: '#EC4899',
+                            },
+                        ].map((s, i) => (
+                            <div
+                                key={s.label}
+                                className="fu"
+                                style={{
+                                    animationDelay: `${i * 0.05}s`,
+                                    padding: '20px', borderRadius: 16,
+                                    background: 'rgba(255,255,255,0.03)',
+                                    border: '1px solid rgba(255,255,255,0.07)',
+                                }}
+                            >
+                                <div style={{ fontSize: 22, marginBottom: 10 }}>{s.icon}</div>
+                                <div style={{
+                                    fontFamily: 'Space Grotesk', fontWeight: 700,
+                                    fontSize: '1.6rem', letterSpacing: '-0.03em',
+                                    background: `linear-gradient(135deg, ${s.color}, ${s.color}99)`,
+                                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                                    backgroundClip: 'text', marginBottom: 4,
+                                }}>{s.value}</div>
+                                <div style={{
+                                    fontFamily: 'DM Sans', fontSize: '0.78rem',
+                                    color: 'rgba(255,255,255,0.3)', lineHeight: 1.4,
+                                }}>{s.label}</div>
+                            </div>
+                        ))}
                     </div>
                 )}
 

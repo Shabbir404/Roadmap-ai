@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
-import { getAllRoadmaps, timeAgo } from '../utils/storage.js'
+import { getAllRoadmaps, timeAgo, getStandaloneProgress } from '../utils/storage.js'
+
 
 const SUGGESTIONS = ['Python', 'React', 'Machine Learning', 'UI/UX Design', 'Web3', 'Data Science']
 
@@ -28,6 +29,14 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
   const recentRoadmaps = getAllRoadmaps().slice(0, 3)
+
+  const globalStats = useMemo(() => {
+    const all = getAllRoadmaps()
+    const completedTopics = all.reduce((sum, rm) => {
+      return sum + Object.keys(getStandaloneProgress(rm.topic)).length
+    }, 0)
+    return { total: all.length, completedTopics }
+  }, [])
 
   function go(q) {
     const t = (q || query).trim()
@@ -86,6 +95,46 @@ export default function Home() {
             >{link.label}</button>
           ))}
         </div>
+
+        {globalStats.total > 0 && (
+          <button
+            onClick={() => navigate('/roadmaps')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.3)'
+              e.currentTarget.style.background = 'rgba(96,165,250,0.08)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+            }}
+          >
+            <span style={{ fontSize: 13 }}>🗺️</span>
+            <span style={{
+              fontFamily: 'Space Grotesk', fontWeight: 600,
+              fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)',
+            }}>
+              {globalStats.total} roadmap{globalStats.total !== 1 ? 's' : ''}
+            </span>
+            {globalStats.completedTopics > 0 && (
+              <>
+                <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.1)' }} />
+                <span style={{
+                  fontFamily: 'Space Grotesk', fontWeight: 600,
+                  fontSize: '0.78rem', color: '#10B981',
+                }}>
+                  {globalStats.completedTopics} ✓
+                </span>
+              </>
+            )}
+          </button>
+        )}
 
         <div style={{
           padding: '6px 16px', borderRadius: 99,

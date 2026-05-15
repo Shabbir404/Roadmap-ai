@@ -66,7 +66,7 @@ export default function Result() {
       setFromCache(true)
       setCachedAt(cached.lastGeneratedAt)
       setLoading(false)
-      showToast('⚡ Loaded from cache', 'info')
+      // showToast('⚡ Loaded from cache', 'info')
     } else {
       generateResult(topic).then(d => {
         setData(d)
@@ -168,23 +168,46 @@ export default function Result() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {!loading && totalTopics > 0 && (
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
+              display: 'flex', alignItems: 'center', gap: 10,
               padding: '6px 14px', borderRadius: 99,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
             }}>
+              {/* Mini progress bar */}
               <div style={{
-                width: 70, height: 4, borderRadius: 99,
+                width: 60, height: 4, borderRadius: 99,
                 background: 'rgba(255,255,255,0.07)', overflow: 'hidden',
               }}>
                 <div style={{
-                  height: '100%', borderRadius: 99, width: `${percent}%`,
-                  background: 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
+                  height: '100%', borderRadius: 99,
+                  width: `${percent}%`,
+                  background: percent === 100
+                    ? 'linear-gradient(90deg,#10B981,#34D399)'
+                    : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
                   transition: 'width 0.4s ease',
                 }} />
               </div>
-              <span style={{ fontFamily: 'Space Grotesk', fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
-                {percent}%
+              <span style={{
+                fontFamily: 'Space Grotesk', fontWeight: 600,
+                fontSize: '0.78rem',
+                color: percent === 100 ? '#10B981' : 'rgba(255,255,255,0.5)',
+              }}>
+                {percent === 100 ? '🎉 Done' : `${percent}%`}
               </span>
+              {!isReadOnly && (
+                <div style={{
+                  width: 1, height: 12,
+                  background: 'rgba(255,255,255,0.1)',
+                }} />
+              )}
+              {!isReadOnly && (
+                <span style={{
+                  fontFamily: 'DM Sans', fontSize: '0.75rem',
+                  color: 'rgba(255,255,255,0.25)',
+                }}>
+                  {doneCount}/{totalTopics}
+                </span>
+              )}
             </div>
           )}
           <button
@@ -289,7 +312,7 @@ export default function Result() {
               </div>
             </div>
             {/* Cache badge */}
-            <div style={{
+            {/* <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: 20, flexWrap: 'wrap', gap: 10,
             }}>
@@ -309,20 +332,20 @@ export default function Result() {
               </div>
 
               {/* Refresh button */}
-              <button
-                onClick={handleRefresh}
-                disabled={!canRefresh(topic) || refreshing}
-                style={{
-                  padding: '6px 16px', borderRadius: 99, cursor: canRefresh(topic) ? 'pointer' : 'not-allowed',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  fontFamily: 'DM Sans', fontSize: '0.78rem',
-                  color: canRefresh(topic) ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}
-              >
-                {refreshing ? '⏳ Refreshing...' : canRefresh(topic) ? '🔄 Refresh Roadmap' : `🔒 Regenerate the roadmap for "${(topic)}" in ${timeUntilRefresh(topic)}`}
-              </button>
-            </div>
+            <button
+              onClick={handleRefresh}
+              disabled={!canRefresh(topic) || refreshing}
+              style={{
+                padding: '6px 16px', borderRadius: 99, cursor: canRefresh(topic) ? 'pointer' : 'not-allowed',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                fontFamily: 'DM Sans', fontSize: '0.78rem',
+                color: canRefresh(topic) ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {refreshing ? '⏳ Refreshing...' : canRefresh(topic) ? '🔄 Refresh Roadmap' : `🔒 Regenerate the roadmap for "${(topic)}" in ${timeUntilRefresh(topic)}`}
+            </button>
+            {/* </div> */}
 
             {/* Overall Progress */}
             {!isReadOnly && (
@@ -519,7 +542,67 @@ export default function Result() {
                 gap: 16,
               }}>
                 {(data.careers || []).map((career, i) => (
-                  <CareerCard key={career.id} career={career} index={i} onClick={openCareer} />
+                  isReadOnly ? (
+                    // Read-only — locked card with CTA
+                    <div
+                      key={career.id}
+                      style={{
+                        padding: '24px', borderRadius: 20, position: 'relative',
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {/* Blur overlay */}
+                      <div style={{
+                        position: 'absolute', inset: 0, zIndex: 2,
+                        backdropFilter: 'blur(6px)',
+                        background: 'rgba(8,8,16,0.6)',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center',
+                        gap: 12, padding: 20, textAlign: 'center',
+                        borderRadius: 20,
+                      }}>
+                        <span style={{ fontSize: 24 }}>🔒</span>
+                        <div style={{
+                          fontFamily: 'Space Grotesk', fontWeight: 600,
+                          fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)',
+                        }}>
+                          Generate to unlock career path.
+                        </div>
+                        <button
+                          onClick={() => window.open('/', '_blank')}
+                          style={{
+                            background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                            border: 'none', borderRadius: 10, cursor: 'pointer',
+                            padding: '8px 20px', fontFamily: 'Space Grotesk',
+                            fontSize: '0.82rem', fontWeight: 600, color: 'white',
+                          }}
+                        >
+                          ✦ Try Path AI Free
+                        </button>
+                      </div>
+
+                      {/* Blurred content behind */}
+                      <div style={{ filter: 'blur(2px)', pointerEvents: 'none' }}>
+                        <div style={{ fontSize: 28, marginBottom: 10 }}>{career.emoji}</div>
+                        <div style={{
+                          fontFamily: 'Space Grotesk', fontWeight: 700,
+                          fontSize: '1rem', color: 'rgba(255,255,255,0.9)', marginBottom: 6,
+                        }}>{career.title}</div>
+                        <div style={{
+                          fontFamily: 'DM Sans', fontSize: '0.82rem',
+                          color: 'rgba(255,255,255,0.35)', marginBottom: 16,
+                        }}>{career.description}</div>
+                        <div style={{
+                          fontFamily: 'Space Grotesk', fontWeight: 700,
+                          fontSize: '0.9rem', color: '#60A5FA',
+                        }}>{career.salary}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <CareerCard key={career.id} career={career} index={i} onClick={openCareer} />
+                  )
                 ))}
               </div>
             </div>
