@@ -17,16 +17,28 @@ export default function AuthModal({ onClose }) {
             />
 
             {/* Modal */}
+            {/* Modal */}
             <div style={{
-                position: 'fixed', top: '50%', left: '50%',
-                transform: 'translate(-50%,-50%)',
-                zIndex: 201, width: 'calc(100% - 48px)', maxWidth: 400,
-                maxHeight: '90vh', overflowY: 'auto',
-                padding: '40px 32px 32px', borderRadius: 24,
-                background: '#0E0E1A',
-                border: '1px solid rgba(255,255,255,0.1)',
-                boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                zIndex: 201,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px',
+                pointerEvents: 'none',
             }}>
+                <div style={{
+                    width: '100%', maxWidth: 400,
+                    maxHeight: '90vh', overflowY: 'auto',
+                    padding: '40px 32px 32px', borderRadius: 24,
+                    background: '#0E0E1A',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
+                    pointerEvents: 'all',
+                    position: 'relative',
+                }}>
+                </div>
 
                 {/* Close button — top right */}
                 <button
