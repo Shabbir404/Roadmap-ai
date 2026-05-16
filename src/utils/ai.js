@@ -1,5 +1,3 @@
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
-
 // const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY || ''
 
 // ─── Core API call ────────────────────────────────────────
@@ -24,30 +22,20 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ''
 // }
 
 async function callAI(prompt) {
-    const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${API_KEY}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { temperature: 0.75, maxOutputTokens: 3000 },
-            }),
-        }
-    )
+    const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+    })
 
     const data = await res.json()
-    console.log('Gemini response:', data)
 
     if (!res.ok) {
-        throw new Error(`Gemini error: ${data?.error?.message || res.status}`)
+        throw new Error(data?.error || 'Server error')
     }
 
-    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    const clean = raw.replace(/```json|```/g, '').trim()
-    return JSON.parse(clean)
+    return data
 }
-
 // ─── Prompts ──────────────────────────────────────────────
 function buildPrompt(topic) {
     return `You are an expert learning guide. The user wants to learn: "${topic}"
@@ -134,10 +122,6 @@ Rules:
 
 // ─── Exports ──────────────────────────────────────────────
 export async function generateResult(topic) {
-    if (!API_KEY) {
-        await new Promise(r => setTimeout(r, 1000))
-        return getMockResult(topic)
-    }
     try {
         return await callAI(buildPrompt(topic))
     } catch (e) {
@@ -147,10 +131,6 @@ export async function generateResult(topic) {
 }
 
 export async function generateCareerRoadmap(topic, career) {
-    if (!API_KEY) {
-        await new Promise(r => setTimeout(r, 800))
-        return getMockCareerRoadmap(topic, career)
-    }
     try {
         return await callAI(careerPrompt(topic, career))
     } catch (e) {

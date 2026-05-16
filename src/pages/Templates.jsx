@@ -60,7 +60,7 @@ export default function Templates() {
                     {[
                         { label: 'Home', path: '/' },
                         { label: 'Roadmaps', path: '/roadmaps' },
-                        { label: 'Templates', path: '/templates' },
+                        { label: 'Demandable', path: '/templates' },
                     ].map(link => (
                         <button
                             key={link.label}
@@ -94,7 +94,7 @@ export default function Templates() {
                         background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
                     }}>
                         <span style={{ fontFamily: 'Space Grotesk', fontSize: '0.75rem', color: '#A78BFA', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                            Free Templates
+                            Industry Needs...
                         </span>
                     </div>
                     <h1 style={{
@@ -102,16 +102,16 @@ export default function Templates() {
                         fontSize: 'clamp(1.8rem,4vw,2.8rem)',
                         letterSpacing: '-0.04em', color: 'rgba(255,255,255,0.95)', marginBottom: 12,
                     }}>
-                        Start from a <span style={{
+                        Start Learning<span style={{
                             background: 'linear-gradient(135deg,#60A5FA,#A78BFA)',
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                        }}>Template</span>
+                        }}> Demandable Skills</span>
                     </h1>
                     <p style={{
                         fontFamily: 'DM Sans', fontSize: '0.95rem',
                         color: 'rgba(255,255,255,0.35)', maxWidth: 480, margin: '0 auto',
                     }}>
-                        Expert-crafted roadmaps ready instantly. No generation needed — zero API cost.
+                        Learn more, Earn more
                     </p>
                 </div>
 

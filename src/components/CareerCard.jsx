@@ -114,7 +114,6 @@ export default function CareerCard({ career, onClick, index }) {
           </a>
         </div>
 
-
       </div>
     </div >
   )

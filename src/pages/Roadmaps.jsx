@@ -75,7 +75,7 @@ export default function Roadmaps() {
                     {[
                         { label: 'Home', path: '/' },
                         { label: 'Roadmaps', path: '/roadmaps' },
-                        { label: 'Templates', path: '/templates' },
+                        { label: 'Demandable', path: '/templates' },
                     ].map(link => (
                         <button
                             key={link.label}
