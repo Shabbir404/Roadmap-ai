@@ -8,6 +8,13 @@ export default function Roadmaps() {
     const [roadmaps, setRoadmaps] = useState([])
     // Compute stats from all roadmaps
     const stats = useMemo(() => {
+
+    }, [roadmaps])
+
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        getAllRoadmaps().then(data => setRoadmaps(data))
         const totalRoadmaps = roadmaps.length
         const totalTopics = roadmaps.reduce((sum, rm) =>
             sum + (rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0), 0)
@@ -28,18 +35,15 @@ export default function Roadmaps() {
         }).length
 
         return { totalRoadmaps, totalTopics, completedTopics, bestRoadmap, completedRoadmaps }
-    }, [roadmaps])
-    const navigate = useNavigate()
 
-    useEffect(() => {
-        setRoadmaps(getAllRoadmaps())
     }, [])
 
-    function handleDelete(topic, e) {
+    async function handleDelete(topic, e) {
         e.stopPropagation()
-        if (!confirm(`Delete "${topic}" roadmap?`)) return
-        deleteRoadmap(topic)
-        setRoadmaps(getAllRoadmaps())
+        if (!window.confirm(`Delete "${topic}" roadmap?`)) return
+        await deleteRoadmap(topic)
+        const updated = await getAllRoadmaps()
+        setRoadmaps(updated)
     }
 
     return (

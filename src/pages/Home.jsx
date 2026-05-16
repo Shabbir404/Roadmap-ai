@@ -1,6 +1,6 @@
 import { useAuth } from '../contexts/AuthContext.jsx'
 import AuthModal from '../components/AuthModal.jsx'
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
@@ -30,15 +30,23 @@ const HOW_IT_WORKS = [
 export default function Home() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
-  const recentRoadmaps = getAllRoadmaps().slice(0, 3)
+
+  const [recentRoadmaps, setRecentRoadmaps] = useState([])
+  useEffect(() => {
+    getAllRoadmaps().then(all => setRecentRoadmaps(all.slice(0, 3)))
+  }, [])
+
   const { user, signOut } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
-  const globalStats = useMemo(() => {
-    const all = getAllRoadmaps()
-    const completedTopics = all.reduce((sum, rm) => {
-      return sum + Object.keys(getStandaloneProgress(rm.topic)).length
-    }, 0)
-    return { total: all.length, completedTopics }
+
+  const [globalStats, setGlobalStats] = useState({ total: 0, completedTopics: 0 })
+  useEffect(() => {
+    getAllRoadmaps().then(all => {
+      const completedTopics = all.reduce((sum, rm) => {
+        return sum + Object.keys(getStandaloneProgress(rm.topic)).length
+      }, 0)
+      setGlobalStats({ total: all.length, completedTopics })
+    })
   }, [])
 
   function go(q) {

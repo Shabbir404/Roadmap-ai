@@ -1,43 +1,32 @@
 import { useState, useEffect, useCallback } from 'react'
-
-// Standalone progress storage — doesn't depend on roadmap existing
-function progressKey(id) {
-    return `progress__${id.toLowerCase().trim().replace(/\s+/g, '_')}`
-}
-
-function loadProgress(topic) {
-    try {
-        const raw = localStorage.getItem(progressKey(topic))
-        return raw ? JSON.parse(raw) : {}
-    } catch { return {} }
-}
-
-function persistProgress(topic, progress) {
-    try {
-        localStorage.setItem(progressKey(topic), JSON.stringify(progress))
-    } catch { }
-}
+import { getProgress, saveProgress } from '../utils/storage.js'
 
 export function useProgress(topic, phases) {
     const [done, setDone] = useState({})
+    const [loaded, setLoaded] = useState(false)
 
-    // Load on topic change
+    // Load progress when topic changes
     useEffect(() => {
         if (!topic) return
-        setDone(loadProgress(topic))
+        setLoaded(false)
+        getProgress(topic).then(saved => {
+            setDone(saved || {})
+            setLoaded(true)
+        })
     }, [topic])
 
     const toggle = useCallback((phaseId, topicId) => {
+        if (!loaded) return
         setDone(prev => {
             const key = `${phaseId}_${topicId}`
             const next = { ...prev }
             if (next[key]) delete next[key]
             else next[key] = true
-            // Save immediately inside toggle — no useEffect delay
-            persistProgress(topic, next)
+            // Save immediately
+            saveProgress(topic, next)
             return next
         })
-    }, [topic])
+    }, [topic, loaded])
 
     const isTopicDone = useCallback((phaseId, topicId) => {
         return !!done[`${phaseId}_${topicId}`]
@@ -51,16 +40,15 @@ export function useProgress(topic, phases) {
         const total = topics?.length || 0
         const completed = topics?.filter(t => done[`${phaseId}_${t.id}`]).length || 0
         return {
-            completed,
-            total,
+            completed, total,
             percent: total > 0 ? Math.round((completed / total) * 100) : 0,
         }
     }, [done])
 
     const reset = useCallback(() => {
         setDone({})
-        persistProgress(topic, {})
+        saveProgress(topic, {})
     }, [topic])
 
-    return { toggle, isTopicDone, doneCount, totalTopics, percent, phaseProgress, reset }
+    return { toggle, isTopicDone, doneCount, totalTopics, percent, phaseProgress, reset, loaded }
 }

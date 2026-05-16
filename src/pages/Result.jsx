@@ -50,6 +50,7 @@ export default function Result() {
     setLoading(true)
     setData(null)
 
+    // Check shared link first
     const sharedData = params.get('data')
     if (sharedData) {
       try {
@@ -58,35 +59,41 @@ export default function Result() {
         setFromCache(false)
         setLoading(false)
         return
-      } catch {
-        // if decode fails fall through to normal load
-      }
+      } catch { }
     }
 
-    const cached = getRoadmap(topic)
-    if (cached) {
-      setData(cached.data)
-      setFromCache(true)
-      setCachedAt(cached.lastGeneratedAt)
-      setLoading(false)
-      // showToast('⚡ Loaded from cache', 'info')
-    } else {
-      // Check rate limit before API call
-      if (!canGenerate()) {
+    // Async load
+    const load = async () => {
+      const cached = await getRoadmap(topic)
+      if (cached) {
+        setData(cached.data)
+        setFromCache(true)
+        setCachedAt(cached.last_generated_at || cached.lastGeneratedAt)
+        setLoading(false)
+        return
+      }
+
+      // Check rate limit
+      const ok = await canGenerate()
+      if (!ok) {
         setLimitReached(true)
         setLoading(false)
         return
       }
-      generateResult(topic).then(d => {
-        incrementGeneration() // count this generation
-        setData(d)
-        saveRoadmap(topic, d)
-        setFromCache(false)
-        setCachedAt(Date.now())
-        setLoading(false)
-        showToast(`✨ Roadmap saved! ${generationsLeft()} generation${generationsLeft() !== 1 ? 's' : ''} left today.`, 'success')
-      })
+
+      // Generate
+      const d = await generateResult(topic)
+      await incrementGeneration()
+      await saveRoadmap(topic, d)
+      setData(d)
+      setFromCache(false)
+      setCachedAt(Date.now())
+      setLoading(false)
+      const left = await generationsLeft()
+      showToast(`✨ Roadmap saved! ${left} generation${left !== 1 ? 's' : ''} left today.`, 'success')
     }
+
+    load()
   }, [topic])
 
   function openCareer(career) {
@@ -112,15 +119,41 @@ export default function Result() {
   }
 
   async function handleRefresh() {
-    if (!canRefresh(topic)) return
+    const ok = await canRefresh(topic)
+    if (!ok) return
     setRefreshing(true)
     const d = await generateResult(topic)
-    saveRoadmap(topic, d)
+    await saveRoadmap(topic, d)
     setData(d)
     setFromCache(false)
     setCachedAt(Date.now())
     setRefreshing(false)
   }
+  const [genLeft, setGenLeft] = useState(3)
+
+  useEffect(() => {
+    {
+      !loading && !isReadOnly && !limitReached && (
+        <div style={{
+          padding: '5px 12px', borderRadius: 99,
+          background: genLeft <= 1
+            ? 'rgba(239,68,68,0.08)'
+            : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${genLeft <= 1
+            ? 'rgba(239,68,68,0.2)'
+            : 'rgba(255,255,255,0.08)'}`,
+        }}>
+          <span style={{
+            fontFamily: 'Space Grotesk', fontSize: '0.75rem', fontWeight: 600,
+            color: genLeft <= 1 ? '#EF4444' : 'rgba(255,255,255,0.35)',
+          }}>
+            {genLeft}/3 left today
+          </span>
+        </div>
+      )
+    }
+  }, [loading])
+
 
   return (
 

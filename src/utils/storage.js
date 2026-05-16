@@ -1,4 +1,6 @@
-// ─── Keys ─────────────────────────────────────────────────
+import { supabase } from './supabase.js'
+
+// ─── Key helpers (for localStorage fallback) ──────────────
 function roadmapKey(topic) {
     return `roadmap__${topic.toLowerCase().trim().replace(/\s+/g, '_')}`
 }
@@ -7,12 +9,9 @@ function careerKey(topic, career) {
     return `career__${topic.toLowerCase().trim().replace(/\s+/g, '_')}__${career.toLowerCase().trim().replace(/\s+/g, '_')}`
 }
 
-
-
 const INDEX_KEY = 'roadmap__index'
 const CAREER_INDEX_KEY = 'career__index'
 
-// ─── Index helpers ─────────────────────────────────────────
 function getIndex(key) {
     try { return JSON.parse(localStorage.getItem(key)) || [] }
     catch { return [] }
@@ -31,107 +30,265 @@ function removeFromIndex(indexKey, value) {
     localStorage.setItem(indexKey, JSON.stringify(index))
 }
 
-// ─── Roadmap save/get/delete ───────────────────────────────
-export function saveRoadmap(topic, data) {
-    const key = roadmapKey(topic)
-    const existing = getRoadmap(topic)
-    const entry = {
-        topic,
-        data,
-        savedAt: existing?.savedAt || Date.now(),
-        lastGeneratedAt: Date.now(),
-        progress: existing?.progress || {},
-    }
-    localStorage.setItem(key, JSON.stringify(entry))
-    addToIndex(INDEX_KEY, topic)
+// ─── Get current user ─────────────────────────────────────
+async function getUser() {
+    const { data: { user } } = await supabase.auth.getUser()
+    return user
 }
 
-export function getRoadmap(topic) {
+// ─── Save roadmap ─────────────────────────────────────────
+export async function saveRoadmap(topic, data) {
+    const user = await getUser()
+
+    if (user) {
+        // Save to Supabase
+        await supabase.from('roadmaps').upsert({
+            user_id: user.id,
+            topic,
+            data,
+            last_generated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,topic' })
+    } else {
+        // Fallback to localStorage
+        const key = roadmapKey(topic)
+        const existing = getLocalRoadmap(topic)
+        const entry = {
+            topic, data,
+            savedAt: existing?.savedAt || Date.now(),
+            lastGeneratedAt: Date.now(),
+            progress: existing?.progress || {},
+        }
+        localStorage.setItem(key, JSON.stringify(entry))
+        addToIndex(INDEX_KEY, topic)
+    }
+}
+
+// ─── Get one roadmap ──────────────────────────────────────
+export async function getRoadmap(topic) {
+    const user = await getUser()
+
+    if (user) {
+        const { data } = await supabase
+            .from('roadmaps')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('topic', topic)
+            .single()
+        return data || null
+    } else {
+        return getLocalRoadmap(topic)
+    }
+}
+
+// ─── Get all roadmaps ─────────────────────────────────────
+export async function getAllRoadmaps() {
+    const user = await getUser()
+
+    if (user) {
+        const { data } = await supabase
+            .from('roadmaps')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+        return data || []
+    } else {
+        return getIndex(INDEX_KEY)
+            .map(topic => getLocalRoadmap(topic))
+            .filter(Boolean)
+    }
+}
+
+// ─── Delete roadmap ───────────────────────────────────────
+export async function deleteRoadmap(topic) {
+    const user = await getUser()
+
+    if (user) {
+        await supabase
+            .from('roadmaps')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('topic', topic)
+        // also delete progress
+        await supabase
+            .from('progress')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('topic', topic)
+        // delete career cache
+        await supabase
+            .from('career_cache')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('topic', topic)
+    } else {
+        localStorage.removeItem(roadmapKey(topic))
+        removeFromIndex(INDEX_KEY, topic)
+    }
+}
+
+// ─── Progress ─────────────────────────────────────────────
+export async function saveProgress(topic, progress) {
+    const user = await getUser()
+
+    if (user) {
+        await supabase.from('progress').upsert({
+            user_id: user.id,
+            topic,
+            done_keys: progress,
+            updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,topic' })
+    } else {
+        // localStorage fallback
+        persistLocalProgress(topic, progress)
+    }
+}
+
+export async function getProgress(topic) {
+    const user = await getUser()
+
+    if (user) {
+        const { data } = await supabase
+            .from('progress')
+            .select('done_keys')
+            .eq('user_id', user.id)
+            .eq('topic', topic)
+            .single()
+        return data?.done_keys || {}
+    } else {
+        return loadLocalProgress(topic)
+    }
+}
+
+// ─── Career cache ─────────────────────────────────────────
+export async function saveCareerRoadmap(topic, career, data) {
+    const user = await getUser()
+
+    if (user) {
+        await supabase.from('career_cache').upsert({
+            user_id: user.id,
+            topic,
+            career,
+            data,
+        }, { onConflict: 'user_id,topic,career' })
+    } else {
+        const key = careerKey(topic, career)
+        localStorage.setItem(key, JSON.stringify({ topic, career, data, savedAt: Date.now() }))
+    }
+}
+
+export async function getCareerRoadmap(topic, career) {
+    const user = await getUser()
+
+    if (user) {
+        const { data } = await supabase
+            .from('career_cache')
+            .select('data')
+            .eq('user_id', user.id)
+            .eq('topic', topic)
+            .eq('career', career)
+            .single()
+        return data ? { data: data.data } : null
+    } else {
+        try {
+            const raw = localStorage.getItem(careerKey(topic, career))
+            return raw ? JSON.parse(raw) : null
+        } catch { return null }
+    }
+}
+
+// ─── Rate limiting ────────────────────────────────────────
+export async function getGenerationsToday() {
+    const user = await getUser()
+    const today = new Date().toISOString().split('T')[0]
+
+    if (user) {
+        const { data } = await supabase
+            .from('generations')
+            .select('count')
+            .eq('user_id', user.id)
+            .eq('date', today)
+            .single()
+        return data?.count || 0
+    } else {
+        // localStorage fallback
+        try {
+            const raw = localStorage.getItem('daily_generation_limit')
+            if (!raw) return 0
+            const { date, count } = JSON.parse(raw)
+            const todayKey = new Date().toLocaleDateString()
+            if (date !== todayKey) return 0
+            return count
+        } catch { return 0 }
+    }
+}
+
+export async function incrementGeneration() {
+    const user = await getUser()
+    const today = new Date().toISOString().split('T')[0]
+
+    if (user) {
+        const current = await getGenerationsToday()
+        await supabase.from('generations').upsert({
+            user_id: user.id,
+            date: today,
+            count: current + 1,
+        }, { onConflict: 'user_id,date' })
+    } else {
+        try {
+            const todayKey = new Date().toLocaleDateString()
+            const current = await getGenerationsToday()
+            localStorage.setItem('daily_generation_limit', JSON.stringify({
+                date: todayKey,
+                count: current + 1,
+            }))
+        } catch { }
+    }
+}
+
+export async function canGenerate() {
+    const count = await getGenerationsToday()
+    return count < 3
+}
+
+export async function generationsLeft() {
+    const count = await getGenerationsToday()
+    return Math.max(0, 3 - count)
+}
+
+// ─── Local helpers (used as fallback) ─────────────────────
+function getLocalRoadmap(topic) {
     try {
         const raw = localStorage.getItem(roadmapKey(topic))
         return raw ? JSON.parse(raw) : null
     } catch { return null }
 }
 
-export function getAllRoadmaps() {
-    return getIndex(INDEX_KEY)
-        .map(topic => {
-            const rm = getRoadmap(topic)
-            if (!rm) return null
-            // Read progress from standalone key so it stays in sync
-            const progress = getStandaloneProgress(topic)
-            return { ...rm, progress }
-        })
-        .filter(Boolean)
+function progressKey(topic) {
+    return `progress__${topic.toLowerCase().trim().replace(/\s+/g, '_')}`
 }
 
-export function deleteRoadmap(topic) {
-    localStorage.removeItem(roadmapKey(topic))
-    removeFromIndex(INDEX_KEY, topic)
-    // also delete all career caches for this topic
-    getIndex(CAREER_INDEX_KEY)
-        .filter(k => k.startsWith(topic.toLowerCase().trim().replace(/\s+/g, '_')))
-        .forEach(k => {
-            localStorage.removeItem(`career__${k}`)
-            removeFromIndex(CAREER_INDEX_KEY, k)
-        })
-}
-
-// ─── Progress ──────────────────────────────────────────────
-export function saveProgress(topic, progress) {
+function loadLocalProgress(topic) {
     try {
-        const key = roadmapKey(topic)
-        const raw = localStorage.getItem(key)
-        if (!raw) return
-        const entry = JSON.parse(raw)
-        entry.progress = progress
-        localStorage.setItem(key, JSON.stringify(entry))
-    } catch { }
-}
-
-export function getProgress(topic) {
-    try {
-        return getRoadmap(topic)?.progress || {}
+        const raw = localStorage.getItem(progressKey(topic))
+        return raw ? JSON.parse(raw) : {}
     } catch { return {} }
 }
 
-// ─── Career roadmap cache ──────────────────────────────────
-export function saveCareerRoadmap(topic, career, data) {
-    const key = careerKey(topic, career)
-    const entry = { topic, career, data, savedAt: Date.now() }
-    localStorage.setItem(key, JSON.stringify(entry))
-    addToIndex(CAREER_INDEX_KEY, `${topic.toLowerCase().trim().replace(/\s+/g, '_')}__${career.toLowerCase().trim().replace(/\s+/g, '_')}`)
-}
-
-export function getCareerRoadmap(topic, career) {
+function persistLocalProgress(topic, progress) {
     try {
-        const raw = localStorage.getItem(careerKey(topic, career))
-        return raw ? JSON.parse(raw) : null
-    } catch { return null }
+        localStorage.setItem(progressKey(topic), JSON.stringify(progress))
+    } catch { }
 }
 
-// ─── 24hr cooldown ─────────────────────────────────────────
-const COOLDOWN_MS = 24 * 60 * 60 * 1000
-
-export function canRefresh(topic) {
-    const entry = getRoadmap(topic)
-    if (!entry) return true
-    return Date.now() - entry.lastGeneratedAt > COOLDOWN_MS
+export function getStandaloneProgress(topic) {
+    return loadLocalProgress(topic)
 }
 
-export function timeUntilRefresh(topic) {
-    const entry = getRoadmap(topic)
-    if (!entry) return null
-    const diff = COOLDOWN_MS - (Date.now() - entry.lastGeneratedAt)
-    if (diff <= 0) return null
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
-}
-
-// ─── Time helper ───────────────────────────────────────────
+// ─── Time helpers ─────────────────────────────────────────
 export function timeAgo(timestamp) {
-    const diff = Date.now() - timestamp
+    if (!timestamp) return ''
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : new Date(timestamp)
+    const diff = Date.now() - date.getTime()
     const mins = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
@@ -140,14 +297,13 @@ export function timeAgo(timestamp) {
     if (hours < 24) return `${hours}h ago`
     return `${days}d ago`
 }
-// ─── Standalone progress (used by useProgress hook) ────────
-function progressKey(topic) {
-    return `progress__${topic.toLowerCase().trim().replace(/\s+/g, '_')}`
-}
 
-export function getStandaloneProgress(topic) {
-    try {
-        const raw = localStorage.getItem(progressKey(topic))
-        return raw ? JSON.parse(raw) : {}
-    } catch { return {} }
+export function resetTime() {
+    const now = new Date()
+    const midnight = new Date()
+    midnight.setHours(24, 0, 0, 0)
+    const diff = midnight - now
+    const hours = Math.floor(diff / 3600000)
+    const mins = Math.floor((diff % 3600000) / 60000)
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
 }
