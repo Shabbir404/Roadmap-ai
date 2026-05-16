@@ -1,3 +1,5 @@
+import { useAuth } from '../contexts/AuthContext.jsx'
+import AuthModal from '../components/AuthModal.jsx'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
@@ -29,7 +31,8 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
   const recentRoadmaps = getAllRoadmaps().slice(0, 3)
-
+  const { user, signOut } = useAuth()
+  const [showAuth, setShowAuth] = useState(false)
   const globalStats = useMemo(() => {
     const all = getAllRoadmaps()
     const completedTopics = all.reduce((sum, rm) => {
@@ -136,7 +139,58 @@ export default function Home() {
             )}
           </button>
         )}
+        {/* Auth button */}
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 14px', borderRadius: 99,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: 99,
+                background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, color: 'white', fontWeight: 700,
+                fontFamily: 'Space Grotesk',
+              }}>
+                {user.email?.[0].toUpperCase()}
+              </div>
+              <span style={{
+                fontFamily: 'DM Sans', fontSize: '0.82rem',
+                color: 'rgba(255,255,255,0.5)',
+                maxWidth: 120, overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {user.email}
+              </span>
+            </div>
+            <button
+              onClick={signOut}
+              style={{
+                padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                fontFamily: 'DM Sans', fontSize: '0.82rem',
+                color: 'rgba(255,255,255,0.35)',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
+            >Sign out</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuth(true)}
+            className="btn-primary"
+            style={{ padding: '8px 20px' }}
+          >
+            Sign in
+          </button>
+        )}
 
+        {/* Auth Modal */}
+        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
         <div style={{
           padding: '6px 16px', borderRadius: 99,
           background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
