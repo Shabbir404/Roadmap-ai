@@ -190,7 +190,6 @@ export default function Home() {
         )}
 
         {/* Auth Modal */}
-        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
         <div style={{
           padding: '6px 16px', borderRadius: 99,
           background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
@@ -411,6 +410,10 @@ export default function Home() {
       )}
 
       <Footer />
+
+      {/* Auth Modal  */}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+
     </div>
   )
 }
