@@ -25,6 +25,8 @@ export default function CareerCard({ career, onClick, index }) {
         </div>
       </div>
 
+
+
       <div style={{
         fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem',
         color: 'rgba(255,255,255,0.92)', marginBottom: 6, letterSpacing: '-0.02em',
@@ -78,8 +80,42 @@ export default function CareerCard({ career, onClick, index }) {
           }}>
             {career.salary}
           </span>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '14px 0 12px' }} />
+
+          {/* Find Jobs button */}
+          <a
+            href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(career.title)}`}
+            target="_blank"
+            rel="noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              padding: '9px 16px', borderRadius: 10, textDecoration: 'none',
+              background: 'rgba(10,102,194,0.12)',
+              border: '1px solid rgba(10,102,194,0.25)',
+              fontFamily: 'Space Grotesk', fontSize: '0.8rem', fontWeight: 600,
+              color: '#5B9BD5', transition: 'all 0.2s ease',
+              position: 'relative', zIndex: 3,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(10,102,194,0.22)'
+              e.currentTarget.style.borderColor = 'rgba(10,102,194,0.45)'
+              e.currentTarget.style.color = '#7BB3E0'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(10,102,194,0.12)'
+              e.currentTarget.style.borderColor = 'rgba(10,102,194,0.25)'
+              e.currentTarget.style.color = '#5B9BD5'
+            }}
+          >
+            View jobs
+          </a>
         </div>
+
+
       </div>
-    </div>
+    </div >
   )
 }

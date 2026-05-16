@@ -10,6 +10,7 @@ import LoadingScreen from '../components/LoadingScreen.jsx'
 import { useToast, ToastContainer } from '../components/Toast.jsx'
 import { generateResult } from '../utils/ai.js'
 import { saveRoadmap, getRoadmap, canRefresh, timeUntilRefresh, timeAgo } from '../utils/storage.js'
+import { canGenerate, incrementGeneration, generationsLeft, resetTime } from '../utils/rateLimit.js'
 
 function Skeleton() {
   return (
@@ -41,6 +42,8 @@ export default function Result() {
   const { toggle, isTopicDone, doneCount, totalTopics, percent, phaseProgress, reset } = useProgress(topic, data?.phases)
   const [search, setSearch] = useState('')
   const isReadOnly = params.get('shared') === 'true'
+  const [limitReached, setLimitReached] = useState(false)
+
 
   useEffect(() => {
     if (!topic) return
@@ -68,13 +71,20 @@ export default function Result() {
       setLoading(false)
       // showToast('⚡ Loaded from cache', 'info')
     } else {
+      // Check rate limit before API call
+      if (!canGenerate()) {
+        setLimitReached(true)
+        setLoading(false)
+        return
+      }
       generateResult(topic).then(d => {
+        incrementGeneration() // count this generation
         setData(d)
         saveRoadmap(topic, d)
         setFromCache(false)
         setCachedAt(Date.now())
         setLoading(false)
-        showToast('✨ Roadmap saved to your library', 'success')
+        showToast(`✨ Roadmap saved! ${generationsLeft()} generation${generationsLeft() !== 1 ? 's' : ''} left today.`, 'success')
       })
     }
   }, [topic])
@@ -148,6 +158,7 @@ export default function Result() {
           {[
             { label: 'Home', path: '/' },
             { label: 'Roadmaps', path: '/roadmaps' },
+            { label: 'Templates', path: '/templates' },
           ].map(link => (
             <button
               key={link.label}
@@ -163,6 +174,25 @@ export default function Result() {
             >{link.label}</button>
           ))}
         </div>
+
+        {!loading && !isReadOnly && !limitReached && (
+          <div style={{
+            padding: '5px 12px', borderRadius: 99,
+            background: generationsLeft() <= 1
+              ? 'rgba(239,68,68,0.08)'
+              : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${generationsLeft() <= 1
+              ? 'rgba(239,68,68,0.2)'
+              : 'rgba(255,255,255,0.08)'}`,
+          }}>
+            <span style={{
+              fontFamily: 'Space Grotesk', fontSize: '0.75rem', fontWeight: 600,
+              color: generationsLeft() <= 1 ? '#EF4444' : 'rgba(255,255,255,0.35)',
+            }}>
+              {generationsLeft()}/3 left today
+            </span>
+          </div>
+        )}
 
         {/* Right side — progress pill + new search */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -270,10 +300,105 @@ export default function Result() {
           </div>
         )}
 
-        {loading ? <LoadingScreen topic={topic} /> : data ? (
+        {loading ? (
+          <LoadingScreen topic={topic} />
+        ) : limitReached ? (
+          <div style={{
+            minHeight: '80vh', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '40px 24px', textAlign: 'center',
+            position: 'relative', zIndex: 10,
+          }}>
+            <div style={{ fontSize: 56, marginBottom: 24 }}>⏳</div>
+            <h2 style={{
+              fontFamily: 'Space Grotesk', fontWeight: 700,
+              fontSize: 'clamp(1.5rem,3vw,2rem)',
+              color: 'rgba(255,255,255,0.9)',
+              letterSpacing: '-0.03em', marginBottom: 12,
+            }}>
+              Daily Limit Reached
+            </h2>
+            <p style={{
+              fontFamily: 'DM Sans', fontSize: '1rem',
+              color: 'rgba(255,255,255,0.4)', lineHeight: 1.75,
+              maxWidth: 400, marginBottom: 32,
+            }}>
+              You've used your 3 free roadmap generations today. Your limit resets in <span style={{ color: '#60A5FA', fontWeight: 600 }}>{resetTime()}</span>.
+            </p>
+
+            {/* Options */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr',
+              gap: 14, width: '100%', maxWidth: 480, marginBottom: 32,
+            }}>
+              <div style={{
+                padding: '20px', borderRadius: 16, textAlign: 'left',
+                background: 'rgba(96,165,250,0.08)',
+                border: '1px solid rgba(96,165,250,0.2)',
+              }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>📚</div>
+                <div style={{
+                  fontFamily: 'Space Grotesk', fontWeight: 600,
+                  fontSize: '0.88rem', color: 'rgba(255,255,255,0.8)', marginBottom: 4,
+                }}>View Saved Roadmaps</div>
+                <div style={{
+                  fontFamily: 'DM Sans', fontSize: '0.78rem',
+                  color: 'rgba(255,255,255,0.35)',
+                }}>Continue your existing learning paths</div>
+                <button
+                  onClick={() => navigate('/roadmaps')}
+                  style={{
+                    marginTop: 14, padding: '7px 16px', borderRadius: 8,
+                    background: 'rgba(96,165,250,0.15)',
+                    border: '1px solid rgba(96,165,250,0.3)',
+                    color: '#60A5FA', fontFamily: 'Space Grotesk',
+                    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >Go to Roadmaps →</button>
+              </div>
+
+              <div style={{
+                padding: '20px', borderRadius: 16, textAlign: 'left',
+                background: 'rgba(167,139,250,0.08)',
+                border: '1px solid rgba(167,139,250,0.2)',
+              }}>
+                <div style={{ fontSize: 24, marginBottom: 8 }}>🔍</div>
+                <div style={{
+                  fontFamily: 'Space Grotesk', fontWeight: 600,
+                  fontSize: '0.88rem', color: 'rgba(255,255,255,0.8)', marginBottom: 4,
+                }}>Browse Templates</div>
+                <div style={{
+                  fontFamily: 'DM Sans', fontSize: '0.78rem',
+                  color: 'rgba(255,255,255,0.35)',
+                }}>Explore pre-built learning paths</div>
+                <button
+                  onClick={() => navigate('/templates')}
+                  style={{
+                    marginTop: 14, padding: '7px 16px', borderRadius: 8,
+                    background: 'rgba(167,139,250,0.15)',
+                    border: '1px solid rgba(167,139,250,0.3)',
+                    color: '#A78BFA', fontFamily: 'Space Grotesk',
+                    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >Browse Templates →</button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/')}
+              style={{
+                padding: '10px 24px', borderRadius: 99, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                fontFamily: 'DM Sans', fontSize: '0.88rem',
+                color: 'rgba(255,255,255,0.4)',
+              }}
+            >← Back to Home</button>
+          </div>
+        ) : data ? ( // <-- Fixed: Cleaned up the broken conditional syntax loop split here
           <div style={{ maxWidth: 780, margin: '0 auto', padding: '40px 24px 80px' }}>
 
-            {/* ── Intro section ── */}
+            {/* Intro section */}
             <div className="fu" style={{ marginBottom: 48 }}>
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -295,7 +420,6 @@ export default function Result() {
                 {data.topic}
               </h1>
 
-              {/* Intro paragraph */}
               <div style={{
                 padding: '22px 26px', borderRadius: 18,
                 background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
@@ -311,105 +435,64 @@ export default function Result() {
                 </div>
               </div>
             </div>
-            {/* Cache badge */}
-            {/* <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              marginBottom: 20, flexWrap: 'wrap', gap: 10,
-            }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                padding: '6px 14px', borderRadius: 99,
-                background: fromCache ? 'rgba(167,139,250,0.08)' : 'rgba(16,185,129,0.08)',
-                border: `1px solid ${fromCache ? 'rgba(167,139,250,0.2)' : 'rgba(16,185,129,0.2)'}`,
-              }}>
-                <span style={{ fontSize: 12 }}>{fromCache ? '⚡' : '✨'}</span>
-                <span style={{
-                  fontFamily: 'Space Grotesk', fontSize: '0.78rem', fontWeight: 500,
-                  color: fromCache ? '#A78BFA' : '#10B981',
-                }}>
-                  {fromCache ? `Saved ${timeAgo(cachedAt)}` : 'Just generated · Auto-saved'}
-                </span>
-              </div>
-
-              {/* Refresh button */}
-            <button className='mb-5'
-              onClick={handleRefresh}
-              disabled={!canRefresh(topic) || refreshing}
-              style={{
-                padding: '6px 16px ', borderRadius: 99, cursor: canRefresh(topic) ? 'pointer' : 'not-allowed',
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                fontFamily: 'DM Sans', fontSize: '0.78rem',
-                color: canRefresh(topic) ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)',
-                display: 'flex', alignItems: 'center', gap: 6,
-              }}
-            >
-              {refreshing ? '⏳ Refreshing...' : canRefresh(topic) ? '🔄 Refresh Roadmap' : `🔒 Regenerate the roadmap for "${(topic)}" in ${timeUntilRefresh(topic)}`}
-            </button>
-            {/* </div> */}
 
             {/* Overall Progress */}
-            {!isReadOnly && (
-              <button onClick={handleRefresh}>
-                <div style={{
-                  padding: '18px 22px', borderRadius: 16, marginBottom: 28,
-                  background: percent === 100 ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${percent === 100 ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.07)'}`,
-                  transition: 'all 0.4s ease',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 16 }}>{percent === 100 ? '🎉' : '📈'}</span>
-                      <div>
-                        <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '0.9rem', color: percent === 100 ? '#10B981' : 'rgba(255,255,255,0.85)' }}>
-                          {percent === 100 ? 'Roadmap Complete!' : 'Your Progress'}
-                        </div>
-                        <div style={{ fontFamily: 'DM Sans', fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>
-                          {doneCount} of {totalTopics} topics completed
-                        </div>
+            {!isReadOnly && totalTopics > 0 && (
+              <div style={{
+                padding: '18px 22px', borderRadius: 16, marginBottom: 28,
+                background: percent === 100 ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${percent === 100 ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                transition: 'all 0.4s ease',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 16 }}>{percent === 100 ? '🎉' : '📈'}</span>
+                    <div>
+                      <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '0.9rem', color: percent === 100 ? '#10B981' : 'rgba(255,255,255,0.85)' }}>
+                        {percent === 100 ? 'Roadmap Complete!' : 'Your Progress'}
+                      </div>
+                      <div style={{ fontFamily: 'DM Sans', fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)', marginTop: 2 }}>
+                        {doneCount} of {totalTopics} topics completed
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.3rem', color: percent === 100 ? '#10B981' : '#60A5FA' }}>
-                        {percent}%
-                      </span>
-                      {doneCount > 0 && (
-                        <button
-                          onClick={reset}
-                          style={{
-                            padding: '3px 10px', borderRadius: 8, cursor: 'pointer',
-                            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                            fontFamily: 'DM Sans', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
-                          onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
-                        >
-                          Reset
-                        </button>
-                      )}
-                    </div>
                   </div>
-                  <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', borderRadius: 99,
-                      width: `${percent}%`,
-                      background: percent === 100 ? 'linear-gradient(90deg,#10B981,#34D399)' : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
-                      boxShadow: percent === 100 ? '0 0 10px rgba(16,185,129,0.5)' : '0 0 10px rgba(59,130,246,0.4)',
-                      transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)',
-                    }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.3rem', color: percent === 100 ? '#10B981' : '#60A5FA' }}>
+                      {percent}%
+                    </span>
+                    {doneCount > 0 && (
+                      <button
+                        onClick={reset}
+                        style={{
+                          padding: '3px 10px', borderRadius: 8, cursor: 'pointer',
+                          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                          fontFamily: 'DM Sans', fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+                      >Reset</button>
+                    )}
                   </div>
-                  {percent === 100 && (
-                    <div style={{ textAlign: 'center', marginTop: 10, fontFamily: 'DM Sans', fontSize: '0.82rem', color: 'rgba(16,185,129,0.7)' }}>
-                      🚀 Now pick a career path below and go deeper!
-                    </div>
-                  )}
                 </div>
-              </button>
+                <div style={{ height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 99,
+                    width: `${percent}%`,
+                    background: percent === 100 ? 'linear-gradient(90deg,#10B981,#34D399)' : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
+                    boxShadow: percent === 100 ? '0 0 10px rgba(16,185,129,0.5)' : '0 0 10px rgba(59,130,246,0.4)',
+                    transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)',
+                  }} />
+                </div>
+                {percent === 100 && (
+                  <div style={{ textAlign: 'center', marginTop: 10, fontFamily: 'DM Sans', fontSize: '0.82rem', color: 'rgba(16,185,129,0.7)' }}>
+                    🚀 Now pick a career path below and go deeper!
+                  </div>
+                )}
+              </div>
             )}
 
-
-            {/* ── Phases ── */}
+            {/* Phases */}
             <div className="fu1" style={{ marginBottom: 64 }}>
-              {/* Roadmap header with search */}
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -424,8 +507,6 @@ export default function Result() {
                       color: '#60A5FA', fontFamily: 'Space Grotesk',
                     }}>{data.phases?.length} Phases</span>
                   </div>
-
-                  {/* Share button */}
                   {!isReadOnly && (
                     <button
                       onClick={handleShare}
@@ -434,17 +515,14 @@ export default function Result() {
                         padding: '8px 16px', borderRadius: 10, cursor: 'pointer',
                         background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)',
                         fontFamily: 'Space Grotesk', fontSize: '0.8rem', fontWeight: 500, color: '#60A5FA',
-                        transition: 'all 0.2s',
                       }}
                       onMouseEnter={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.15)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)' }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(96,165,250,0.08)'; e.currentTarget.style.borderColor = 'rgba(96,165,250,0.2)' }}
-                    >
-                      🔗 Share Roadmap
-                    </button>
+                    >🔗 Share Roadmap</button>
                   )}
                 </div>
 
-                {/* Search inside roadmap */}
+                {/* Search */}
                 <div style={{ position: 'relative' }}>
                   <span style={{
                     position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
@@ -461,7 +539,6 @@ export default function Result() {
                       border: '1px solid rgba(255,255,255,0.08)',
                       borderRadius: 12, color: 'rgba(255,255,255,0.8)',
                       fontFamily: 'DM Sans', fontSize: '0.88rem', outline: 'none',
-                      transition: 'all 0.2s',
                     }}
                     onFocus={e => { e.currentTarget.style.borderColor = 'rgba(96,165,250,0.4)'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
                     onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
@@ -476,25 +553,24 @@ export default function Result() {
                       }}
                     >✕</button>
                   )}
-                  {search && (
-                    <div style={{
-                      fontFamily: 'DM Sans', fontSize: '0.8rem',
-                      color: 'rgba(255,255,255,0.3)', marginBottom: 16, marginTop: -8,
-                    }}>
-                      {data.phases.reduce((sum, p) =>
-                        sum + p.topics.filter(t =>
-                          t.title.toLowerCase().includes(search.toLowerCase()) ||
-                          t.description?.toLowerCase().includes(search.toLowerCase())
-                        ).length, 0
-                      )} topics found for "{search}"
-                    </div>
-                  )}
                 </div>
+                {search && (
+                  <div style={{
+                    fontFamily: 'DM Sans', fontSize: '0.8rem',
+                    color: 'rgba(255,255,255,0.3)', marginTop: 8, marginBottom: 4,
+                  }}>
+                    {data.phases.reduce((sum, p) =>
+                      sum + p.topics.filter(t =>
+                        t.title.toLowerCase().includes(search.toLowerCase()) ||
+                        t.description?.toLowerCase().includes(search.toLowerCase())
+                      ).length, 0
+                    )} topics found for "{search}"
+                  </div>
+                )}
               </div>
 
               {(data.phases || [])
                 .map(phase => {
-                  // filter topics by search keyword
                   if (!search.trim()) return phase
                   const filtered = phase.topics.filter(t =>
                     t.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -518,16 +594,14 @@ export default function Result() {
               }
             </div>
 
-            {/* ── Career Paths ── */}
+            {/* Career Paths */}
             <div className="fu2">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                 <span style={{ fontSize: 20 }}>💼</span>
                 <h2 style={{
                   fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.25rem',
                   color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em',
-                }}>
-                  Career Paths
-                </h2>
+                }}>Career Paths</h2>
               </div>
               <p style={{
                 fontFamily: 'DM Sans', fontSize: '0.88rem',
@@ -535,7 +609,6 @@ export default function Result() {
               }}>
                 Click any career to get a dedicated roadmap for that exact goal.
               </p>
-
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
@@ -543,7 +616,6 @@ export default function Result() {
               }}>
                 {(data.careers || []).map((career, i) => (
                   isReadOnly ? (
-                    // Read-only — locked card with CTA
                     <div
                       key={career.id}
                       style={{
@@ -553,7 +625,6 @@ export default function Result() {
                         overflow: 'hidden',
                       }}
                     >
-                      {/* Blur overlay */}
                       <div style={{
                         position: 'absolute', inset: 0, zIndex: 2,
                         backdropFilter: 'blur(6px)',
@@ -567,9 +638,7 @@ export default function Result() {
                         <div style={{
                           fontFamily: 'Space Grotesk', fontWeight: 600,
                           fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)',
-                        }}>
-                          Generate to unlock career path.
-                        </div>
+                        }}>Generate to unlock career paths</div>
                         <button
                           onClick={() => window.open('/', '_blank')}
                           style={{
@@ -578,12 +647,8 @@ export default function Result() {
                             padding: '8px 20px', fontFamily: 'Space Grotesk',
                             fontSize: '0.82rem', fontWeight: 600, color: 'white',
                           }}
-                        >
-                          ✦ Try Path AI Free
-                        </button>
+                        >✦ Try Path AI Free</button>
                       </div>
-
-                      {/* Blurred content behind */}
                       <div style={{ filter: 'blur(2px)', pointerEvents: 'none' }}>
                         <div style={{ fontSize: 28, marginBottom: 10 }}>{career.emoji}</div>
                         <div style={{
@@ -607,8 +672,9 @@ export default function Result() {
               </div>
             </div>
 
+            <Footer />
           </div>
-        ) : null}
+        ) : null} {/* <-- Fixed: Added structural parenthesis layout close sequence here */}
       </div>
 
       {/* ── iPhone sheet ── */}

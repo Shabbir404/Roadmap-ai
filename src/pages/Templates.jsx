@@ -1,0 +1,245 @@
+import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import NeuralBg from '../components/NeuralBg.jsx'
+import Footer from '../components/Footer.jsx'
+import { TEMPLATES } from '../data/templates.js'
+import { saveRoadmap, getRoadmap } from '../utils/storage.js'
+
+const ALL_TAGS = ['All', 'Beginner Friendly', 'Programming', 'Web Dev', 'AI', 'Data Science', 'Design', 'Security', 'Mobile', 'Advanced']
+
+export default function Templates() {
+    const navigate = useNavigate()
+    const [activeTag, setActiveTag] = useState('All')
+
+    const filtered = activeTag === 'All'
+        ? TEMPLATES
+        : TEMPLATES.filter(t => t.tags.includes(activeTag))
+
+    function useTemplate(template) {
+        // Save template as a roadmap (no API call needed)
+        const existing = getRoadmap(template.topic)
+        if (!existing) {
+            saveRoadmap(template.topic, {
+                topic: template.topic,
+                intro: template.intro,
+                phases: template.phases,
+                careers: template.careers,
+            })
+        }
+        navigate(`/result?topic=${encodeURIComponent(template.topic)}`)
+    }
+
+    return (
+        <div style={{ minHeight: '100vh', background: '#080810', position: 'relative' }}>
+            <NeuralBg />
+            <div style={{ position: 'fixed', top: -200, left: -150, width: 600, height: 600, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(59,130,246,0.1),transparent 70%)' }} />
+
+            {/* Navbar */}
+            <nav style={{
+                position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 40px',
+                background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(20px)',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+            }}>
+                <button onClick={() => navigate('/')} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                }}>
+                    <div style={{
+                        width: 34, height: 34, borderRadius: 9,
+                        background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
+                    }}>🧭</div>
+                    <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)' }}>
+                        Path <span style={{ color: '#60A5FA' }}>AI</span>
+                    </span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {[
+                        { label: 'Home', path: '/' },
+                        { label: 'Roadmaps', path: '/roadmaps' },
+                        { label: 'Templates', path: '/templates' },
+                    ].map(link => (
+                        <button
+                            key={link.label}
+                            onClick={() => navigate(link.path)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontFamily: 'DM Sans', fontSize: '0.9rem',
+                                color: link.path === '/templates' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)',
+                                padding: '6px 14px', borderRadius: 8,
+                            }}
+                        >{link.label}</button>
+                    ))}
+                </div>
+
+                <div style={{
+                    padding: '6px 16px', borderRadius: 99,
+                    background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
+                    fontFamily: 'Space Grotesk', fontSize: '0.78rem', color: '#60A5FA', fontWeight: 500,
+                }}>
+                    ⚡ Developed by Shabbir
+                </div>
+            </nav>
+
+            <div style={{ position: 'relative', zIndex: 10, maxWidth: 960, margin: '0 auto', padding: '100px 24px 80px' }}>
+
+                {/* Header */}
+                <div className="fu" style={{ textAlign: 'center', marginBottom: 48 }}>
+                    <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                        padding: '5px 16px', borderRadius: 99, marginBottom: 16,
+                        background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.2)',
+                    }}>
+                        <span style={{ fontFamily: 'Space Grotesk', fontSize: '0.75rem', color: '#A78BFA', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                            Free Templates
+                        </span>
+                    </div>
+                    <h1 style={{
+                        fontFamily: 'Space Grotesk', fontWeight: 700,
+                        fontSize: 'clamp(1.8rem,4vw,2.8rem)',
+                        letterSpacing: '-0.04em', color: 'rgba(255,255,255,0.95)', marginBottom: 12,
+                    }}>
+                        Start from a <span style={{
+                            background: 'linear-gradient(135deg,#60A5FA,#A78BFA)',
+                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                        }}>Template</span>
+                    </h1>
+                    <p style={{
+                        fontFamily: 'DM Sans', fontSize: '0.95rem',
+                        color: 'rgba(255,255,255,0.35)', maxWidth: 480, margin: '0 auto',
+                    }}>
+                        Expert-crafted roadmaps ready instantly. No generation needed — zero API cost.
+                    </p>
+                </div>
+
+                {/* Tag filters */}
+                <div className="fu1" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 36, justifyContent: 'center' }}>
+                    {ALL_TAGS.map(tag => (
+                        <button
+                            key={tag}
+                            onClick={() => setActiveTag(tag)}
+                            style={{
+                                padding: '6px 16px', borderRadius: 99, cursor: 'pointer',
+                                fontFamily: 'Space Grotesk', fontSize: '0.8rem', fontWeight: 500,
+                                background: activeTag === tag ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.04)',
+                                border: `1px solid ${activeTag === tag ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                                color: activeTag === tag ? '#60A5FA' : 'rgba(255,255,255,0.35)',
+                                transition: 'all 0.2s',
+                            }}
+                        >{tag}</button>
+                    ))}
+                </div>
+
+                {/* Template grid */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: 18,
+                }}>
+                    {filtered.map((template, i) => {
+                        const alreadySaved = !!getRoadmap(template.topic)
+                        return (
+                            <div
+                                key={template.id}
+                                className="fu"
+                                style={{
+                                    animationDelay: `${i * 0.06}s`,
+                                    padding: '24px', borderRadius: 20,
+                                    background: 'rgba(255,255,255,0.03)',
+                                    border: `1px solid ${alreadySaved ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                                    transition: 'all 0.3s ease', cursor: 'pointer',
+                                    position: 'relative', overflow: 'hidden',
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.borderColor = `${template.color}50`
+                                    e.currentTarget.style.transform = 'translateY(-4px)'
+                                    e.currentTarget.style.boxShadow = `0 20px 60px rgba(0,0,0,0.3)`
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.borderColor = alreadySaved ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)'
+                                    e.currentTarget.style.transform = 'translateY(0)'
+                                    e.currentTarget.style.boxShadow = 'none'
+                                }}
+                                onClick={() => useTemplate(template)}
+                            >
+                                {/* Already saved badge */}
+                                {alreadySaved && (
+                                    <div style={{
+                                        position: 'absolute', top: 16, right: 16,
+                                        padding: '3px 10px', borderRadius: 99,
+                                        background: 'rgba(16,185,129,0.12)',
+                                        border: '1px solid rgba(16,185,129,0.3)',
+                                        fontFamily: 'Space Grotesk', fontSize: '0.68rem',
+                                        fontWeight: 600, color: '#10B981',
+                                    }}>✓ Saved</div>
+                                )}
+
+                                {/* Emoji */}
+                                <div style={{
+                                    width: 52, height: 52, borderRadius: 14, marginBottom: 16,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: 26, background: `${template.color}18`,
+                                    border: `1px solid ${template.color}30`,
+                                }}>{template.emoji}</div>
+
+                                {/* Title */}
+                                <div style={{
+                                    fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem',
+                                    color: 'rgba(255,255,255,0.92)', marginBottom: 8, letterSpacing: '-0.02em',
+                                }}>{template.topic}</div>
+
+                                {/* Description */}
+                                <div style={{
+                                    fontFamily: 'DM Sans', fontSize: '0.82rem',
+                                    color: 'rgba(255,255,255,0.35)', lineHeight: 1.65, marginBottom: 18,
+                                }}>{template.description}</div>
+
+                                {/* Meta */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                                    <span style={{
+                                        padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem',
+                                        background: `${template.color}14`, border: `1px solid ${template.color}30`,
+                                        color: template.color, fontFamily: 'Space Grotesk', fontWeight: 500,
+                                    }}>{template.phases.length} Phases</span>
+                                    <span style={{
+                                        padding: '3px 10px', borderRadius: 99, fontSize: '0.72rem',
+                                        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                                        color: 'rgba(255,255,255,0.35)', fontFamily: 'Space Grotesk',
+                                    }}>~{template.weeks} weeks</span>
+                                </div>
+
+                                {/* Tags */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                                    {template.tags.map(tag => (
+                                        <span key={tag} style={{
+                                            padding: '2px 8px', borderRadius: 99, fontSize: '0.68rem',
+                                            background: 'rgba(255,255,255,0.04)',
+                                            border: '1px solid rgba(255,255,255,0.07)',
+                                            color: 'rgba(255,255,255,0.28)', fontFamily: 'DM Sans',
+                                        }}>{tag}</span>
+                                    ))}
+                                </div>
+
+                                {/* CTA */}
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    gap: 8, padding: '10px', borderRadius: 12,
+                                    background: `${template.color}12`,
+                                    border: `1px solid ${template.color}25`,
+                                    fontFamily: 'Space Grotesk', fontSize: '0.82rem',
+                                    fontWeight: 600, color: template.color,
+                                }}>
+                                    {alreadySaved ? '→ Continue Learning' : '✦ Learn this'}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+            <Footer />
+        </div>
+    )
+}

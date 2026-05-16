@@ -71,15 +71,25 @@ export default function Roadmaps() {
                     </span>
                 </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-                    <button onClick={() => navigate('/')} style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        fontFamily: 'DM Sans', fontSize: '0.9rem', color: 'rgba(255,255,255,0.4)',
-                    }}>Home</button>
-                    <button style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        fontFamily: 'DM Sans', fontSize: '0.9rem', color: 'rgba(255,255,255,0.9)',
-                    }}>Roadmaps</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {[
+                        { label: 'Home', path: '/' },
+                        { label: 'Roadmaps', path: '/roadmaps' },
+                        { label: 'Templates', path: '/templates' },
+                    ].map(link => (
+                        <button
+                            key={link.label}
+                            onClick={() => navigate(link.path)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontFamily: 'DM Sans', fontSize: '0.9rem',
+                                color: link.path === '/roadmaps' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)',
+                                padding: '6px 14px', borderRadius: 8, transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.9)'}
+                            onMouseLeave={e => e.currentTarget.style.color = link.path === '/roadmaps' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)'}
+                        >{link.label}</button>
+                    ))}
                     {roadmaps.length > 0 && (
                         <div style={{
                             display: 'flex', alignItems: 'center', gap: 8,
@@ -116,6 +126,38 @@ export default function Roadmaps() {
                 </div>
 
                 {/* Empty state */}
+
+                {roadmaps.length === 0 && (
+                    <div className="fu1" style={{
+                        textAlign: 'center', padding: '80px 40px',
+                        background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: 24, marginBottom: 32,
+                    }}>
+                        <div style={{ fontSize: 48, marginBottom: 16 }}>🗺️</div>
+                        <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: '1.1rem', color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>
+                            No saved roadmaps yet
+                        </div>
+                        <p style={{ fontFamily: 'DM Sans', fontSize: '0.88rem', color: 'rgba(255,255,255,0.25)', marginBottom: 24 }}>
+                            Generate a roadmap and it auto-saves here
+                        </p>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button className="btn-primary" onClick={() => navigate('/')}>
+                                ✦ Generate Your First Roadmap
+                            </button>
+                            <button
+                                onClick={() => navigate('/templates')}
+                                style={{
+                                    padding: '10px 22px', borderRadius: 12, cursor: 'pointer',
+                                    background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)',
+                                    fontFamily: 'Space Grotesk', fontSize: '0.9rem', fontWeight: 600, color: '#A78BFA',
+                                }}
+                            >
+                                Browse Templates →
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Stats section */}
                 {roadmaps.length > 0 && (
                     <div style={{
@@ -194,7 +236,8 @@ export default function Roadmaps() {
                 }}>
                     {roadmaps.map((rm, i) => {
                         const totalTopics = rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0
-                        const doneCount = Object.keys(rm.progress || {}).length
+                        const progress = getStandaloneProgress(rm.topic)
+                        const doneCount = Object.keys(progress).length
                         const percent = totalTopics > 0 ? Math.round((doneCount / totalTopics) * 100) : 0
                         const isComplete = percent === 100 && totalTopics > 0
 

@@ -80,6 +80,7 @@ export default function Home() {
           {[
             { label: 'Home', path: '/' },
             { label: 'Roadmaps', path: '/roadmaps' },
+            { label: 'Templates', path: '/templates' },
           ].map(link => (
             <button
               key={link.label}
@@ -227,7 +228,7 @@ export default function Home() {
       </div>
 
       {/* How it works */}
-      <div style={{ position: 'relative', zIndex: 10, padding: '80px 24px', maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ position: 'relative', zIndex: 10, padding: '80px 24px', maxWidth: 900, margin: '0 auto', }}>
         <div className="fu" style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
