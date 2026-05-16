@@ -10,8 +10,9 @@ export default function AuthModal({ onClose }) {
                 onClick={onClose}
                 style={{
                     position: 'fixed', inset: 0, zIndex: 200,
-                    background: 'rgba(0,0,0,0.7)',
+                    background: 'rgba(0,0,0,0.75)',
                     backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
                 }}
             />
 
@@ -19,33 +20,83 @@ export default function AuthModal({ onClose }) {
             <div style={{
                 position: 'fixed', top: '50%', left: '50%',
                 transform: 'translate(-50%,-50%)',
-                zIndex: 201, width: '100%', maxWidth: 420,
-                padding: '40px 36px', borderRadius: 24,
+                zIndex: 201, width: 'calc(100% - 48px)', maxWidth: 400,
+                maxHeight: '90vh', overflowY: 'auto',
+                padding: '40px 32px 32px', borderRadius: 24,
                 background: '#0E0E1A',
                 border: '1px solid rgba(255,255,255,0.1)',
                 boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
             }}>
+
+                {/* Close button — top right */}
+                <button
+                    onClick={onClose}
+                    style={{
+                        position: 'absolute', top: 14, right: 14,
+                        width: 34, height: 34, borderRadius: 99,
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        cursor: 'pointer', color: 'rgba(255,255,255,0.5)',
+                        fontSize: 16, display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.12)'
+                        e.currentTarget.style.color = 'rgba(255,255,255,0.9)'
+                    }}
+                    onMouseLeave={e => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                        e.currentTarget.style.color = 'rgba(255,255,255,0.5)'
+                    }}
+                >✕</button>
+
                 {/* Logo */}
-                <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                <div style={{ textAlign: 'center', marginBottom: 28 }}>
                     <div style={{
-                        width: 52, height: 52, borderRadius: 14, margin: '0 auto 16px',
+                        width: 52, height: 52, borderRadius: 14,
+                        margin: '0 auto 14px',
                         background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 24,
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', fontSize: 24,
                     }}>🧭</div>
                     <h2 style={{
-                        fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.4rem',
-                        color: 'rgba(255,255,255,0.95)', marginBottom: 8,
-                        letterSpacing: '-0.03em',
+                        fontFamily: 'Space Grotesk', fontWeight: 700,
+                        fontSize: '1.3rem', color: 'rgba(255,255,255,0.95)',
+                        marginBottom: 8, letterSpacing: '-0.03em',
                     }}>
                         Sign in to Path AI
                     </h2>
                     <p style={{
-                        fontFamily: 'DM Sans', fontSize: '0.88rem',
-                        color: 'rgba(255,255,255,0.38)', lineHeight: 1.6,
+                        fontFamily: 'DM Sans', fontSize: '0.86rem',
+                        color: 'rgba(255,255,255,0.38)', lineHeight: 1.65,
                     }}>
-                        Save your roadmaps, track progress across devices, and never lose your learning data.
+                        Save roadmaps, track progress across devices, and never lose your learning data.
                     </p>
+                </div>
+
+                {/* Benefits */}
+                <div style={{
+                    padding: '16px 18px', borderRadius: 14, marginBottom: 24,
+                    background: 'rgba(96,165,250,0.06)',
+                    border: '1px solid rgba(96,165,250,0.15)',
+                }}>
+                    {[
+                        ['☁️', 'Roadmaps sync across all your devices'],
+                        ['📈', 'Progress never lost — even if you clear browser'],
+                        ['🔒', 'Your data is private and secure'],
+                    ].map(([icon, text]) => (
+                        <div key={text} style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            marginBottom: 8,
+                        }}>
+                            <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
+                            <span style={{
+                                fontFamily: 'DM Sans', fontSize: '0.82rem',
+                                color: 'rgba(255,255,255,0.5)',
+                            }}>{text}</span>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Google Sign In */}
@@ -53,7 +104,8 @@ export default function AuthModal({ onClose }) {
                     onClick={signInWithGoogle}
                     style={{
                         width: '100%', padding: '14px 20px', borderRadius: 14,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                        display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', gap: 12,
                         background: 'rgba(255,255,255,0.06)',
                         border: '1px solid rgba(255,255,255,0.12)',
                         cursor: 'pointer', transition: 'all 0.2s ease',
@@ -62,14 +114,15 @@ export default function AuthModal({ onClose }) {
                     }}
                     onMouseEnter={e => {
                         e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
-                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.22)'
+                        e.currentTarget.style.transform = 'translateY(-1px)'
                     }}
                     onMouseLeave={e => {
                         e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
                         e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+                        e.currentTarget.style.transform = 'translateY(0)'
                     }}
                 >
-                    {/* Google icon */}
                     <svg width="20" height="20" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -79,28 +132,29 @@ export default function AuthModal({ onClose }) {
                     Continue with Google
                 </button>
 
-                {/* Privacy note */}
-                <p style={{
-                    textAlign: 'center', marginTop: 20,
-                    fontFamily: 'DM Sans', fontSize: '0.75rem',
-                    color: 'rgba(255,255,255,0.2)',
-                }}>
-                    By signing in you agree to our terms. We never share your data.
-                </p>
-
-                {/* Close */}
+                {/* Skip option */}
                 <button
                     onClick={onClose}
                     style={{
-                        position: 'absolute', top: 16, right: 16,
-                        width: 32, height: 32, borderRadius: 99,
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        cursor: 'pointer', color: 'rgba(255,255,255,0.4)',
-                        fontSize: 16, display: 'flex',
-                        alignItems: 'center', justifyContent: 'center',
+                        width: '100%', marginTop: 12, padding: '10px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        fontFamily: 'DM Sans', fontSize: '0.82rem',
+                        color: 'rgba(255,255,255,0.25)', transition: 'color 0.2s',
                     }}
-                >✕</button>
+                    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+                >
+                    Continue without signing in
+                </button>
+
+                {/* Privacy note */}
+                <p style={{
+                    textAlign: 'center', marginTop: 16,
+                    fontFamily: 'DM Sans', fontSize: '0.72rem',
+                    color: 'rgba(255,255,255,0.15)',
+                }}>
+                    We never share your data with anyone.
+                </p>
             </div>
         </>
     )
