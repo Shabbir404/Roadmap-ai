@@ -167,7 +167,9 @@ export default function Home() {
               </span>
             </div>
             <button
-              onClick={signOut}
+              onClick={() => {
+                if (window.confirm('Are you sure you want to sign out?')) signOut()
+              }}
               style={{
                 padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
                 background: 'rgba(255,255,255,0.04)',
