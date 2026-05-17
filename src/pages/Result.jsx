@@ -126,17 +126,15 @@ export default function Result() {
         }
 
         const d = await generateResult(topic)
-        incrementRoadmap(user)
+        await incrementGeneration()
         try {
           await saveRoadmap(topic, d)
-        } catch (saveErr) {
-          if (saveErr.localSaved) {
-            showToast(saveErr.message, 'warn')
-          } else {
-            throw saveErr
-          }
+        } catch (err) {
+          // Cloud save failed but local save succeeded — continue normally
+          console.error('Cloud save failed:', err.message)
         }
         setData(d)
+
         setFromCache(false)
         setCachedAt(Date.now())
         setLoading(false)
