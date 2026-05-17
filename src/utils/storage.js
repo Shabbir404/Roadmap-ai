@@ -179,22 +179,27 @@ export async function deleteRoadmap(topic) {
 // ─── Progress ─────────────────────────────────────────────
 export async function saveProgress(topic, progress) {
     const user = await getUser()
+    console.log('saveProgress - user:', user?.email, 'topic:', topic)
 
     if (user) {
-        await supabase.from('progress').upsert({
+        const { error } = await supabase.from('progress').upsert({
             user_id: user.id,
             topic,
             done_keys: progress,
             updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id,topic' })
+
+        if (error) console.error('saveProgress Supabase error:', error)
+        else console.log('saveProgress saved to Supabase ✓')
     } else {
-        // localStorage fallback
+        console.log('saveProgress - no user, saving to localStorage')
         persistLocalProgress(topic, progress)
     }
 }
 
 export async function getProgress(topic) {
     const user = await getUser()
+    console.log('getProgress - user:', user?.email, 'topic:', topic)
 
     if (user) {
         const { data, error } = await supabase
@@ -202,11 +207,13 @@ export async function getProgress(topic) {
             .select('done_keys')
             .eq('user_id', user.id)
             .eq('topic', topic)
-            .maybeSingle()
-        if (error) console.error('getProgress error:', error)
-        if (data?.done_keys) return data.done_keys
+            .single()
+
+        console.log('getProgress Supabase result:', data, 'error:', error)
+        return data?.done_keys || {}
+    } else {
+        return loadLocalProgress(topic)
     }
-    return loadLocalProgress(topic)
 }
 
 // ─── Career cache (AI-generated career roadmaps) ──────────

@@ -22,8 +22,10 @@ export function useProgress(topic, phases) {
             const next = { ...prev }
             if (next[key]) delete next[key]
             else next[key] = true
-            // Save immediately
-            saveProgress(topic, next)
+            // Save async — don't block UI
+            saveProgress(topic, next).catch(err =>
+                console.error('Progress save error:', err)
+            )
             return next
         })
     }, [topic, loaded])
