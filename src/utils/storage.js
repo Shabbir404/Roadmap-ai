@@ -75,7 +75,7 @@ export function saveRoadmapLocal(topic, data, source = 'ai') {
         data,
         savedAt: existing?.savedAt || Date.now(),
         lastGeneratedAt: Date.now(),
-        source,                              // ← use parameter
+        source,
         progress: existing?.progress || {},
     }
     localStorage.setItem(key, JSON.stringify(entry))
