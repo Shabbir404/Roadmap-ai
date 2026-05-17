@@ -8,20 +8,20 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Get initial session
+        // Handle the OAuth redirect
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null)
             setLoading(false)
         })
 
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log('Auth event:', event, session?.user?.email)
             setUser(session?.user ?? null)
+            setLoading(false)
         })
 
         return () => subscription.unsubscribe()
     }, [])
-
     // async function signInWithGoogle() {
     //     await supabase.auth.signInWithOAuth({
     //         provider: 'google',
@@ -32,16 +32,14 @@ export function AuthProvider({ children }) {
     // }
 
     async function signInWithGoogle() {
-        await supabase.auth.signInWithOAuth({
+        const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin,
-                queryParams: {
-                    access_type: 'offline',
-                    prompt: 'consent',
-                },
+                redirectTo: `${window.location.origin}/`,
+                skipBrowserRedirect: false,
             },
         })
+        if (error) console.error('Sign in error:', error)
     }
 
 
