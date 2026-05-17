@@ -7,12 +7,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true,
-        storageKey: 'pathai-auth',
-    },
-    global: {
-        headers: {
-            'X-Client-Info': 'pathai',
-        },
+        detectSessionInUrl: false,
+        flowType: 'pkce',
     },
 })
