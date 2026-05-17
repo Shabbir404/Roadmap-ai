@@ -178,28 +178,25 @@ export async function deleteRoadmap(topic) {
 
 // ─── Progress ─────────────────────────────────────────────
 export async function saveProgress(topic, progress) {
+    // Always save to localStorage as backup
+    persistLocalProgress(topic, progress)
+
     const user = await getUser()
-    console.log('saveProgress - user:', user?.email, 'topic:', topic)
+    if (!user) return
 
-    if (user) {
-        const { error } = await supabase.from('progress').upsert({
-            user_id: user.id,
-            topic,
-            done_keys: progress,
-            updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,topic' })
+    const { error } = await supabase.from('progress').upsert({
+        user_id: user.id,
+        topic,
+        done_keys: progress,
+        updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,topic' })
 
-        if (error) console.error('saveProgress Supabase error:', error)
-        else console.log('saveProgress saved to Supabase ✓')
-    } else {
-        console.log('saveProgress - no user, saving to localStorage')
-        persistLocalProgress(topic, progress)
-    }
+    if (error) console.error('saveProgress Supabase error:', error)
+    else console.log('saveProgress saved to Supabase ✓')
 }
 
 export async function getProgress(topic) {
     const user = await getUser()
-    console.log('getProgress - user:', user?.email, 'topic:', topic)
 
     if (user) {
         const { data, error } = await supabase
@@ -207,15 +204,20 @@ export async function getProgress(topic) {
             .select('done_keys')
             .eq('user_id', user.id)
             .eq('topic', topic)
-            .single()
+            .maybeSingle()  // ← changed from .single() to .maybeSingle()
 
-        console.log('getProgress Supabase result:', data, 'error:', error)
-        return data?.done_keys || {}
-    } else {
+        if (error) {
+            console.error('getProgress error:', error)
+            return loadLocalProgress(topic)
+        }
+
+        // If found in Supabase return it, else check localStorage
+        if (data?.done_keys) return data.done_keys
         return loadLocalProgress(topic)
     }
-}
 
+    return loadLocalProgress(topic)
+}
 // ─── Career cache (AI-generated career roadmaps) ──────────
 function getLocalCareerRoadmap(topic, career) {
     try {
