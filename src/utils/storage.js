@@ -87,22 +87,20 @@ export async function getRoadmap(topic) {
 
 // ─── Get all roadmaps ─────────────────────────────────────
 export async function getAllRoadmaps() {
-
     const { data: { session } } = await supabase.auth.getSession()
     console.log('Session token:', session?.access_token ? 'EXISTS' : 'MISSING')
     console.log('User:', session?.user?.email)
 
-    const user = await getUser()
-    console.log('getUser result:', user?.email)
+    const currentUser = await getUser()
+    console.log('getUser result:', currentUser?.email)
 
-    const user = await getUser()
-
-    if (user) {
-        const { data } = await supabase
+    if (currentUser) {
+        const { data, error } = await supabase
             .from('roadmaps')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false })
+        console.log('getAllRoadmaps result:', data, 'error:', error)
         return data || []
     } else {
         return getIndex(INDEX_KEY)
