@@ -307,3 +307,57 @@ export function resetTime() {
     const mins = Math.floor((diff % 3600000) / 60000)
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
 }
+
+export async function canRefresh(topic) {
+    const user = await getUser()
+    const COOLDOWN_MS = 24 * 60 * 60 * 1000
+
+    if (user) {
+        const { data } = await supabase
+            .from('roadmaps')
+            .select('last_generated_at')
+            .eq('user_id', user.id)
+            .eq('topic', topic)
+            .single()
+        if (!data) return true
+        return Date.now() - new Date(data.last_generated_at).getTime() > COOLDOWN_MS
+    } else {
+        try {
+            const raw = localStorage.getItem(roadmapKey(topic))
+            if (!raw) return true
+            const entry = JSON.parse(raw)
+            return Date.now() - entry.lastGeneratedAt > COOLDOWN_MS
+        } catch { return true }
+    }
+}
+
+export async function timeUntilRefresh(topic) {
+    const user = await getUser()
+    const COOLDOWN_MS = 24 * 60 * 60 * 1000
+
+    if (user) {
+        const { data } = await supabase
+            .from('roadmaps')
+            .select('last_generated_at')
+            .eq('user_id', user.id)
+            .eq('topic', topic)
+            .single()
+        if (!data) return null
+        const diff = COOLDOWN_MS - (Date.now() - new Date(data.last_generated_at).getTime())
+        if (diff <= 0) return null
+        const hours = Math.floor(diff / 3600000)
+        const mins = Math.floor((diff % 3600000) / 60000)
+        return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+    } else {
+        try {
+            const raw = localStorage.getItem(roadmapKey(topic))
+            if (!raw) return null
+            const entry = JSON.parse(raw)
+            const diff = COOLDOWN_MS - (Date.now() - entry.lastGeneratedAt)
+            if (diff <= 0) return null
+            const hours = Math.floor(diff / 3600000)
+            const mins = Math.floor((diff % 3600000) / 60000)
+            return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+        } catch { return null }
+    }
+}
