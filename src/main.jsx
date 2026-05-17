@@ -7,6 +7,9 @@ import Result from './pages/Result.jsx'
 import Roadmaps from './pages/Roadmaps.jsx'
 import Templates from './pages/Templates.jsx'
 import './index.css'
+import { migrateLegacyLimits } from './utils/generationLimits.js'
+
+migrateLegacyLimits()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

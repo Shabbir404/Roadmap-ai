@@ -2,6 +2,9 @@ import { saveCareerRoadmap, getCareerRoadmap, isAiCareerCache } from '../utils/s
 import { useState, useEffect } from 'react'
 import { generateCareerRoadmap } from '../utils/ai.js'
 import { useProgress } from '../hooks/useProgress.js'
+import { useAuth } from '../contexts/AuthContext.jsx'
+import AuthModal from './AuthModal.jsx'
+import { canGenerateCareer, incrementCareer } from '../utils/generationLimits.js'
 
 function PhaseRow({ phase, topic, index, isTopicDone, onToggle, phaseProgress }) {
   const [open, setOpen] = useState(index === 0);
@@ -157,6 +160,9 @@ export default function CareerSheet({ career, topic, onClose, fromTemplate = fal
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
+  const [needsSignIn, setNeedsSignIn] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
+  const { user } = useAuth()
 
   const progressKey = `${topic}__${career.title}`
   const { toggle, isTopicDone, doneCount, totalTopics, percent, phaseProgress, reset } = useProgress(progressKey, data?.phases)
@@ -167,21 +173,26 @@ export default function CareerSheet({ career, topic, onClose, fromTemplate = fal
     async function load() {
       setLoading(true)
       setLoadError(null)
+      setNeedsSignIn(false)
       try {
         const cached = await getCareerRoadmap(topic, career.title)
         if (cancelled) return
 
-        // Template main roadmap is local-only; career sheets must use Gemini.
-        // Reuse cache only when a prior AI career roadmap exists.
         const canUseCache = isAiCareerCache(cached)
         if (canUseCache) {
           setData(cached.data)
           return
         }
 
+        if (!canGenerateCareer(user)) {
+          setNeedsSignIn(true)
+          return
+        }
+
         const d = await generateCareerRoadmap(topic, career.title)
         if (cancelled) return
         setData(d)
+        incrementCareer(user)
         try {
           await saveCareerRoadmap(topic, career.title, d)
         } catch (saveErr) {
@@ -200,7 +211,7 @@ export default function CareerSheet({ career, topic, onClose, fromTemplate = fal
 
     load()
     return () => { cancelled = true }
-  }, [topic, career.title, fromTemplate])
+  }, [topic, career.title, fromTemplate, user])
 
   return (
     <>
@@ -261,6 +272,24 @@ export default function CareerSheet({ career, topic, onClose, fromTemplate = fal
                   ? `AI is building your ${career.title} career path...`
                   : `Building your ${career.title} roadmap...`}
               </div>
+            </div>
+          ) : needsSignIn ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <p style={{
+                fontFamily: 'DM Sans', fontSize: '0.9rem',
+                color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: 16,
+              }}>
+                You used your 1 free career path. Sign in for unlimited career roadmaps.
+              </p>
+              <button
+                onClick={() => setShowAuth(true)}
+                style={{
+                  padding: '10px 20px', borderRadius: 10, cursor: 'pointer',
+                  background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                  border: 'none', color: 'white',
+                  fontFamily: 'Space Grotesk', fontSize: '0.85rem', fontWeight: 600,
+                }}
+              >Sign in with Google</button>
             </div>
           ) : loadError ? (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
@@ -370,6 +399,7 @@ export default function CareerSheet({ career, topic, onClose, fromTemplate = fal
           ) : null}
         </div>
       </div>
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </>
   )
 }

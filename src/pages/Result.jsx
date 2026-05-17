@@ -11,7 +11,14 @@ import { useToast, ToastContainer } from '../components/Toast.jsx'
 import { generateResult } from '../utils/ai.js'
 import { getTemplateByTopic, templateToRoadmapData } from '../data/templates.js'
 import { saveRoadmap, saveRoadmapLocal, getRoadmap, canRefresh, timeUntilRefresh, timeAgo } from '../utils/storage.js'
-import { canGenerate, incrementGeneration, generationsLeft, resetTime } from '../utils/rateLimit.js'
+import { useAuth } from '../contexts/AuthContext.jsx'
+import AuthModal from '../components/AuthModal.jsx'
+import {
+  canGenerateRoadmap,
+  incrementRoadmap,
+  getRoadmapQuota,
+  migrateLegacyLimits,
+} from '../utils/generationLimits.js'
 
 function Skeleton() {
   return (
@@ -44,16 +51,31 @@ export default function Result() {
   const [search, setSearch] = useState('')
   const isReadOnly = params.get('shared') === 'true'
   const isTemplateSource = params.get('source') === 'template'
-  const [limitReached, setLimitReached] = useState(false)
+  const [limitReason, setLimitReason] = useState(null)
   const [genError, setGenError] = useState(null)
   const [retryKey, setRetryKey] = useState(0)
+  const [quotaLabel, setQuotaLabel] = useState('')
+  const [showAuth, setShowAuth] = useState(false)
+  const { user } = useAuth()
+
+  useEffect(() => {
+    migrateLegacyLimits()
+    getRoadmapQuota(user).then(q => setQuotaLabel(q.label))
+  }, [user])
+
+  useEffect(() => {
+    if (user && limitReason === 'anon_exhausted') {
+      setLimitReason(null)
+      setRetryKey(k => k + 1)
+    }
+  }, [user, limitReason])
 
   useEffect(() => {
     if (!topic) return
     setLoading(true)
     setData(null)
     setGenError(null)
-    setLimitReached(false)
+    setLimitReason(null)
 
     // Check shared link first
     const sharedData = params.get('data')
@@ -96,15 +118,15 @@ export default function Result() {
           return
         }
 
-        const ok = await canGenerate()
-        if (!ok) {
-          setLimitReached(true)
+        if (!canGenerateRoadmap(user)) {
+          const q = await getRoadmapQuota(user)
+          setLimitReason(user ? 'auth_exhausted' : 'anon_exhausted')
           setLoading(false)
           return
         }
 
         const d = await generateResult(topic)
-        await incrementGeneration()
+        incrementRoadmap(user)
         try {
           await saveRoadmap(topic, d)
         } catch (saveErr) {
@@ -118,8 +140,9 @@ export default function Result() {
         setFromCache(false)
         setCachedAt(Date.now())
         setLoading(false)
-        const left = await generationsLeft()
-        showToast(`✨ Roadmap saved! ${left} generation${left !== 1 ? 's' : ''} left today.`, 'success')
+        const q = await getRoadmapQuota(user)
+        setQuotaLabel(q.label)
+        showToast(`✨ Roadmap saved! ${q.label}.`, 'success')
       } catch (e) {
         console.error('Roadmap load/generate failed:', e)
         const msg = e?.message || 'Failed to generate roadmap.'
@@ -130,7 +153,7 @@ export default function Result() {
     }
 
     load()
-  }, [topic, retryKey, isTemplateSource])
+  }, [topic, retryKey, isTemplateSource, user])
 
   function openCareer(career) {
     setSelectedCareer(career)
@@ -232,21 +255,17 @@ export default function Result() {
           ))}
         </div>
 
-        {!loading && !isReadOnly && !limitReached && (
+        {!loading && !isReadOnly && !isTemplateSource && quotaLabel && (
           <div style={{
             padding: '5px 12px', borderRadius: 99,
-            background: generationsLeft() <= 1
-              ? 'rgba(239,68,68,0.08)'
-              : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${generationsLeft() <= 1
-              ? 'rgba(239,68,68,0.2)'
-              : 'rgba(255,255,255,0.08)'}`,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
           }}>
             <span style={{
               fontFamily: 'Space Grotesk', fontSize: '0.75rem', fontWeight: 600,
-              color: generationsLeft() <= 1 ? '#EF4444' : 'rgba(255,255,255,0.35)',
+              color: 'rgba(255,255,255,0.35)',
             }}>
-              {generationsLeft()}/3 left today
+              {quotaLabel}
             </span>
           </div>
         )}
@@ -412,29 +431,44 @@ export default function Result() {
               >← Back to Home</button>
             </div>
           </div>
-        ) : limitReached ? (
+        ) : limitReason ? (
           <div style={{
             minHeight: '80vh', display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
             padding: '40px 24px', textAlign: 'center',
             position: 'relative', zIndex: 10,
           }}>
-            <div style={{ fontSize: 56, marginBottom: 24 }}>⏳</div>
+            <div style={{ fontSize: 56, marginBottom: 24 }}>
+              {limitReason === 'anon_exhausted' ? '🔐' : '⏳'}
+            </div>
             <h2 style={{
               fontFamily: 'Space Grotesk', fontWeight: 700,
               fontSize: 'clamp(1.5rem,3vw,2rem)',
               color: 'rgba(255,255,255,0.9)',
               letterSpacing: '-0.03em', marginBottom: 12,
             }}>
-              Daily Limit Reached
+              {limitReason === 'anon_exhausted' ? 'Sign in to continue' : 'Free limit reached'}
             </h2>
             <p style={{
               fontFamily: 'DM Sans', fontSize: '1rem',
               color: 'rgba(255,255,255,0.4)', lineHeight: 1.75,
-              maxWidth: 400, marginBottom: 32,
+              maxWidth: 440, marginBottom: 32,
             }}>
-              You've used your 3 free roadmap generations today. Your limit resets in <span style={{ color: '#60A5FA', fontWeight: 600 }}>{resetTime()}</span>.
+              {limitReason === 'anon_exhausted'
+                ? 'You used your 1 free roadmap (and 1 career path) without signing in. Sign in with Google to unlock 2 more AI roadmaps. Career paths are unlimited after sign-in.'
+                : 'You used all 3 free AI roadmaps (1 before sign-in + 2 after). Templates are always free. Browse saved roadmaps or templates below.'}
             </p>
+            {limitReason === 'anon_exhausted' && (
+              <button
+                onClick={() => setShowAuth(true)}
+                style={{
+                  marginBottom: 28, padding: '12px 28px', borderRadius: 99, cursor: 'pointer',
+                  background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                  border: 'none', fontFamily: 'Space Grotesk',
+                  fontSize: '0.95rem', fontWeight: 600, color: 'white',
+                }}
+              >Sign in with Google →</button>
+            )}
 
             {/* Options */}
             <div style={{
@@ -798,8 +832,10 @@ export default function Result() {
           />
         )
       }
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       <ToastContainer toasts={toasts} />
 
     </div >
   )
 }
+

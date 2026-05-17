@@ -278,65 +278,6 @@ export function isAiCareerCache(cached) {
     return !!(cached?.data && cached.generatedBy === 'ai')
 }
 
-// ─── Rate limiting ────────────────────────────────────────
-export async function getGenerationsToday() {
-    const user = await getUser()
-    const today = new Date().toISOString().split('T')[0]
-
-    if (user) {
-        const { data } = await supabase
-            .from('generations')
-            .select('count')
-            .eq('user_id', user.id)
-            .eq('date', today)
-            .single()
-        return data?.count || 0
-    } else {
-        // localStorage fallback
-        try {
-            const raw = localStorage.getItem('daily_generation_limit')
-            if (!raw) return 0
-            const { date, count } = JSON.parse(raw)
-            const todayKey = new Date().toLocaleDateString()
-            if (date !== todayKey) return 0
-            return count
-        } catch { return 0 }
-    }
-}
-
-export async function incrementGeneration() {
-    const user = await getUser()
-    const today = new Date().toISOString().split('T')[0]
-
-    if (user) {
-        const current = await getGenerationsToday()
-        await supabase.from('generations').upsert({
-            user_id: user.id,
-            date: today,
-            count: current + 1,
-        }, { onConflict: 'user_id,date' })
-    } else {
-        try {
-            const todayKey = new Date().toLocaleDateString()
-            const current = await getGenerationsToday()
-            localStorage.setItem('daily_generation_limit', JSON.stringify({
-                date: todayKey,
-                count: current + 1,
-            }))
-        } catch { }
-    }
-}
-
-export async function canGenerate() {
-    const count = await getGenerationsToday()
-    return count < 3
-}
-
-export async function generationsLeft() {
-    const count = await getGenerationsToday()
-    return Math.max(0, 3 - count)
-}
-
 // ─── Local helpers ────────────────────────────────────────
 function getLocalRoadmap(topic) {
     try {

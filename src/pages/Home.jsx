@@ -1,5 +1,6 @@
 import { useAuth } from '../contexts/AuthContext.jsx'
 import AuthModal from '../components/AuthModal.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
@@ -38,6 +39,7 @@ export default function Home() {
 
   const { user, signOut } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
 
   const [globalStats, setGlobalStats] = useState({ total: 0, completedTopics: 0 })
   useEffect(() => {
@@ -175,9 +177,7 @@ export default function Home() {
               </span>
             </div>
             <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to sign out?')) signOut()
-              }}
+              onClick={() => setShowSignOutConfirm(true)}
               style={{
                 padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
                 background: 'rgba(255,255,255,0.04)',
@@ -424,6 +424,18 @@ export default function Home() {
       {/* Auth Modal  */}
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
+      <ConfirmModal
+        open={showSignOutConfirm}
+        title="Sign out?"
+        message="You'll stay signed in on this device until you confirm. Your saved roadmaps remain in your account."
+        confirmLabel="Sign out"
+        cancelLabel="Stay signed in"
+        danger
+        onConfirm={() => { setShowSignOutConfirm(false); signOut() }}
+        onCancel={() => setShowSignOutConfirm(false)}
+      />
+
     </div>
   )
 }
+
