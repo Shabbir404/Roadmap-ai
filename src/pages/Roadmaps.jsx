@@ -6,15 +6,13 @@ import { getAllRoadmaps, deleteRoadmap, timeAgo, getStandaloneProgress } from '.
 
 export default function Roadmaps() {
     const [roadmaps, setRoadmaps] = useState([])
-    // Compute stats from all roadmaps
-    const stats = useMemo(() => {
-
-    }, [roadmaps])
-
     const navigate = useNavigate()
 
     useEffect(() => {
-        getAllRoadmaps().then(data => setRoadmaps(data))
+        getAllRoadmaps().then(data => setRoadmaps(data || []))
+    }, [])
+
+    const stats = useMemo(() => {
         const totalRoadmaps = roadmaps.length
         const totalTopics = roadmaps.reduce((sum, rm) =>
             sum + (rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0), 0)
@@ -33,24 +31,20 @@ export default function Roadmaps() {
             const done = Object.keys(getStandaloneProgress(rm.topic)).length
             return total > 0 && done === total
         }).length
-
         return { totalRoadmaps, totalTopics, completedTopics, bestRoadmap, completedRoadmaps }
-
-    }, [])
+    }, [roadmaps])
 
     async function handleDelete(topic, e) {
         e.stopPropagation()
         if (!window.confirm(`Delete "${topic}" roadmap?`)) return
         await deleteRoadmap(topic)
         const updated = await getAllRoadmaps()
-        setRoadmaps(updated)
+        setRoadmaps(updated || [])
     }
 
     return (
         <div style={{ minHeight: '100vh', background: '#080810', position: 'relative' }}>
             <NeuralBg />
-
-            {/* Orbs */}
             <div style={{ position: 'fixed', top: -200, left: -150, width: 600, height: 600, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(59,130,246,0.1),transparent 70%)' }} />
 
             {/* Navbar */}
@@ -79,7 +73,7 @@ export default function Roadmaps() {
                     {[
                         { label: 'Home', path: '/' },
                         { label: 'Roadmaps', path: '/roadmaps' },
-                        { label: 'Demandable', path: '/templates' },
+                        { label: 'Templates', path: '/templates' },
                     ].map(link => (
                         <button
                             key={link.label}
@@ -113,7 +107,7 @@ export default function Roadmaps() {
                 </div>
             </nav>
 
-            <div style={{ position: 'relative', zIndex: 10, paddingTop: 72, maxWidth: 900, margin: '0 auto', padding: '100px 24px 80px' }}>
+            <div style={{ position: 'relative', zIndex: 10, maxWidth: 900, margin: '0 auto', padding: '100px 24px 80px' }}>
 
                 {/* Header */}
                 <div className="fu" style={{ marginBottom: 40 }}>
@@ -122,7 +116,10 @@ export default function Roadmaps() {
                         fontSize: 'clamp(1.8rem,4vw,2.8rem)',
                         letterSpacing: '-0.04em', color: 'rgba(255,255,255,0.95)', marginBottom: 10,
                     }}>
-                        My <span style={{ background: 'linear-gradient(135deg,#60A5FA,#A78BFA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Roadmaps</span>
+                        My <span style={{
+                            background: 'linear-gradient(135deg,#60A5FA,#A78BFA)',
+                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                        }}>Roadmaps</span>
                     </h1>
                     <p style={{ fontFamily: 'DM Sans', fontSize: '0.95rem', color: 'rgba(255,255,255,0.35)' }}>
                         {roadmaps.length} saved roadmap{roadmaps.length !== 1 ? 's' : ''}
@@ -130,7 +127,6 @@ export default function Roadmaps() {
                 </div>
 
                 {/* Empty state */}
-
                 {roadmaps.length === 0 && (
                     <div className="fu1" style={{
                         textAlign: 'center', padding: '80px 40px',
@@ -155,14 +151,12 @@ export default function Roadmaps() {
                                     background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)',
                                     fontFamily: 'Space Grotesk', fontSize: '0.9rem', fontWeight: 600, color: '#A78BFA',
                                 }}
-                            >
-                                Browse Templates →
-                            </button>
+                            >Browse Templates →</button>
                         </div>
                     </div>
                 )}
 
-                {/* Stats section */}
+                {/* Stats */}
                 {roadmaps.length > 0 && (
                     <div style={{
                         display: 'grid',
@@ -170,51 +164,23 @@ export default function Roadmaps() {
                         gap: 12, marginBottom: 40,
                     }}>
                         {[
-                            {
-                                icon: '🗺️',
-                                value: stats.totalRoadmaps,
-                                label: 'Roadmaps Saved',
-                                color: '#3B82F6',
-                            },
-                            {
-                                icon: '✅',
-                                value: stats.completedTopics,
-                                label: 'Topics Completed',
-                                color: '#10B981',
-                            },
-                            {
-                                icon: '🎯',
-                                value: `${stats.totalTopics > 0 ? Math.round((stats.completedTopics / stats.totalTopics) * 100) : 0}%`,
-                                label: 'Overall Progress',
-                                color: '#8B5CF6',
-                            },
-                            {
-                                icon: '🏆',
-                                value: stats.completedRoadmaps,
-                                label: 'Completed',
-                                color: '#F59E0B',
-                            },
+                            { icon: '🗺️', value: stats.totalRoadmaps, label: 'Roadmaps Saved', color: '#3B82F6' },
+                            { icon: '✅', value: stats.completedTopics, label: 'Topics Completed', color: '#10B981' },
+                            { icon: '🎯', value: `${stats.totalTopics > 0 ? Math.round((stats.completedTopics / stats.totalTopics) * 100) : 0}%`, label: 'Overall Progress', color: '#8B5CF6' },
+                            { icon: '🏆', value: stats.completedRoadmaps, label: 'Completed', color: '#F59E0B' },
                             {
                                 icon: '🔥',
-                                value: stats.bestRoadmap.topic
-                                    ? `${stats.bestRoadmap.pct}%`
-                                    : '—',
-                                label: stats.bestRoadmap.topic
-                                    ? `Best: ${stats.bestRoadmap.topic}`
-                                    : 'No progress yet',
+                                value: stats.bestRoadmap?.topic ? `${stats.bestRoadmap.pct}%` : '—',
+                                label: stats.bestRoadmap?.topic ? `Best: ${stats.bestRoadmap.topic}` : 'No progress yet',
                                 color: '#EC4899',
                             },
                         ].map((s, i) => (
-                            <div
-                                key={s.label}
-                                className="fu"
-                                style={{
-                                    animationDelay: `${i * 0.05}s`,
-                                    padding: '20px', borderRadius: 16,
-                                    background: 'rgba(255,255,255,0.03)',
-                                    border: '1px solid rgba(255,255,255,0.07)',
-                                }}
-                            >
+                            <div key={s.label} className="fu" style={{
+                                animationDelay: `${i * 0.05}s`,
+                                padding: '20px', borderRadius: 16,
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.07)',
+                            }}>
                                 <div style={{ fontSize: 22, marginBottom: 10 }}>{s.icon}</div>
                                 <div style={{
                                     fontFamily: 'Space Grotesk', fontWeight: 700,
@@ -257,10 +223,15 @@ export default function Roadmaps() {
                                     transition: 'all 0.3s ease', position: 'relative',
                                 }}
                                 onClick={() => navigate(`/result?topic=${encodeURIComponent(rm.topic)}`)}
-                                onMouseEnter={e => { e.currentTarget.style.borderColor = isComplete ? 'rgba(16,185,129,0.5)' : 'rgba(96,165,250,0.3)'; e.currentTarget.style.transform = 'translateY(-3px)' }}
-                                onMouseLeave={e => { e.currentTarget.style.borderColor = isComplete ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)' }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.borderColor = isComplete ? 'rgba(16,185,129,0.5)' : 'rgba(96,165,250,0.3)'
+                                    e.currentTarget.style.transform = 'translateY(-3px)'
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.borderColor = isComplete ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.08)'
+                                    e.currentTarget.style.transform = 'translateY(0)'
+                                }}
                             >
-                                {/* Delete button */}
                                 <button
                                     onClick={e => handleDelete(rm.topic, e)}
                                     style={{
@@ -274,39 +245,27 @@ export default function Roadmaps() {
                                     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.25)' }}
                                 >✕</button>
 
-                                {/* Topic */}
                                 <div style={{ marginBottom: 16 }}>
-                                    <div style={{ fontSize: 28, marginBottom: 10 }}>
-                                        {isComplete ? '🎉' : '🗺️'}
-                                    </div>
+                                    <div style={{ fontSize: 28, marginBottom: 10 }}>{isComplete ? '🎉' : '🗺️'}</div>
                                     <div style={{
                                         fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.1rem',
                                         color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.02em', marginBottom: 4,
                                     }}>{rm.topic}</div>
                                     <div style={{ fontFamily: 'DM Sans', fontSize: '0.78rem', color: 'rgba(255,255,255,0.28)' }}>
-                                        {rm.data?.phases?.length} phases · {totalTopics} topics · {timeAgo(rm.savedAt)}
+                                        {rm.data?.phases?.length} phases · {totalTopics} topics · {timeAgo(rm.created_at || rm.savedAt)}
                                     </div>
                                 </div>
 
-                                {/* Progress bar */}
                                 <div style={{ marginBottom: 8 }}>
-                                    <div style={{
-                                        height: 4, borderRadius: 99,
-                                        background: 'rgba(255,255,255,0.07)', overflow: 'hidden',
-                                    }}>
+                                    <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                                         <div style={{
-                                            height: '100%', borderRadius: 99,
-                                            width: `${percent}%`,
-                                            background: isComplete
-                                                ? 'linear-gradient(90deg,#10B981,#34D399)'
-                                                : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
+                                            height: '100%', borderRadius: 99, width: `${percent}%`,
+                                            background: isComplete ? 'linear-gradient(90deg,#10B981,#34D399)' : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
                                             transition: 'width 0.4s ease',
                                         }} />
                                     </div>
                                 </div>
-                                <div style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <span style={{ fontFamily: 'DM Sans', fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)' }}>
                                         {doneCount}/{totalTopics} completed
                                     </span>
