@@ -122,7 +122,8 @@ export default function Result() {
         showToast(`✨ Roadmap saved! ${left} generation${left !== 1 ? 's' : ''} left today.`, 'success')
       } catch (e) {
         console.error('Roadmap load/generate failed:', e)
-        setGenError(e?.message || 'Failed to generate roadmap. Check your API key and try again.')
+        const msg = e?.message || 'Failed to generate roadmap.'
+        setGenError(msg.includes('parse') ? `${msg} Try again — if it keeps failing, try a shorter search term.` : msg)
         setLoading(false)
         showToast(e?.message || 'AI generation failed', 'error')
       }

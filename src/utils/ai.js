@@ -77,9 +77,10 @@ Return ONLY valid JSON — no markdown, no backticks, no extra text.
 }
 
 Rules:
-- Generate 4-6 phases
-- Each phase has 4-6 topics
-- Generate 4-6 career paths relevant to this exact topic
+- Generate exactly 4 phases (not more)
+- Each phase has exactly 4 topics
+- Generate exactly 4 career paths relevant to this exact topic
+- Use standard double quotes in JSON. No trailing commas. No markdown.
 - difficulty: Easy / Medium / Hard
 - mathIntensity: Low / Medium / High
 - salary: realistic USD range
@@ -115,8 +116,9 @@ Return ONLY valid JSON — no markdown, no backticks.
 }
 
 Rules:
-- 4-5 phases specific to this career
-- Each phase 3-5 topics
+- Exactly 4 phases specific to this career
+- Each phase exactly 3 topics
+- Use standard double quotes in JSON. No trailing commas. No markdown.
 - Make it feel like a real career progression`
 }
 
