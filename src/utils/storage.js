@@ -67,15 +67,18 @@ export function getStandaloneProgress(topic) {
 }
 
 // ─── Roadmap local save ───────────────────────────────────
-export function saveRoadmapLocal(topic, data) {
+export function saveRoadmapLocal(topic, data, source = 'ai') {
+    const key = roadmapKey(topic)
     const existing = getLocalRoadmap(topic)
     const entry = {
-        topic, data,
+        topic,
+        data,
         savedAt: existing?.savedAt || Date.now(),
         lastGeneratedAt: Date.now(),
+        source,                              // ← use parameter
         progress: existing?.progress || {},
     }
-    localStorage.setItem(roadmapKey(topic), JSON.stringify(entry))
+    localStorage.setItem(key, JSON.stringify(entry))
     addToIndex(INDEX_KEY, topic)
 }
 

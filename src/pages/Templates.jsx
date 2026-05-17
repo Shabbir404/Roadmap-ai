@@ -24,7 +24,7 @@ export default function Templates() {
         : TEMPLATES.filter(t => t.tags.includes(activeTag))
 
     function useTemplate(template) {
-        saveRoadmapLocal(template.topic, templateToRoadmapData(template))
+        saveRoadmapLocal(template.topic, templateToRoadmapData(template), 'template')
         setSavedTopics(prev => new Set([...prev, template.topic]))
         navigate(`/result?topic=${encodeURIComponent(template.topic)}&source=template`)
     }

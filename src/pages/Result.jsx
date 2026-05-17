@@ -130,7 +130,6 @@ export default function Result() {
         try {
           await saveRoadmap(topic, d)
         } catch (err) {
-          // Cloud save failed but local save succeeded — continue normally
           console.error('Cloud save failed:', err.message)
         }
         setData(d)
@@ -184,9 +183,8 @@ export default function Result() {
       const d = await generateResult(topic)
       try {
         await saveRoadmap(topic, d)
-      } catch (saveErr) {
-        if (saveErr.localSaved) showToast(saveErr.message, 'warn')
-        else throw saveErr
+      } catch (err) {
+        console.error('Cloud save failed:', err.message)
       }
       setData(d)
       setFromCache(false)
