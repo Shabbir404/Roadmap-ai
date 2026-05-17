@@ -1,6 +1,6 @@
 import { useAuth } from '../contexts/AuthContext.jsx'
 import AuthModal from '../components/AuthModal.jsx'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
