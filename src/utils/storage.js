@@ -32,8 +32,8 @@ function removeFromIndex(indexKey, value) {
 
 // ─── Get current user ─────────────────────────────────────
 async function getUser() {
-    const { data: { user } } = await supabase.auth.getUser()
-    return user
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.user || null
 }
 
 // ─── Save roadmap ─────────────────────────────────────────
