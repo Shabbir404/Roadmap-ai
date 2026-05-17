@@ -32,10 +32,15 @@ function removeFromIndex(indexKey, value) {
 
 // ─── Get current user ─────────────────────────────────────
 async function getUser() {
-    const { data: { session } } = await supabase.auth.getSession()
-    return session?.user || null
-}
+    // First try to get session from URL (after OAuth redirect)
+    const { data: { session }, error } = await supabase.auth.getSession()
+    if (error) console.error('getSession error:', error)
+    if (session?.user) return session.user
 
+    // Fallback — refresh session
+    const { data: { user } } = await supabase.auth.getUser()
+    return user || null
+}
 // ─── Save roadmap ─────────────────────────────────────────
 export async function saveRoadmap(topic, data) {
     const user = await getUser()
