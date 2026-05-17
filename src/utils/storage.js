@@ -30,6 +30,21 @@ function removeFromIndex(indexKey, value) {
     localStorage.setItem(indexKey, JSON.stringify(index))
 }
 
+function normalizeRoadmapRow(row) {
+    if (!row) return null
+    if (row.data) return row
+    return { topic: row.topic, data: row, lastGeneratedAt: row.lastGeneratedAt }
+}
+
+function supabaseErrorMessage(error, fallback = 'Database error') {
+    if (!error) return fallback
+    const msg = error.message || fallback
+    if (error.code === '42501' || msg.toLowerCase().includes('policy')) {
+        return 'Cloud save blocked (Supabase RLS). Roadmap saved on this device only.'
+    }
+    return msg
+}
+
 // ─── Get current user ─────────────────────────────────────
 async function getUser() {
     // First try to get session from URL (after OAuth redirect)
@@ -41,48 +56,74 @@ async function getUser() {
     const { data: { user } } = await supabase.auth.getUser()
     return user || null
 }
-// ─── Save roadmap ─────────────────────────────────────────
-export async function saveRoadmap(topic, data) {
-    const user = await getUser()
+// ─── Local-only roadmap (templates — no API / no cloud) ───
+export function saveRoadmapLocal(topic, data) {
+    const key = roadmapKey(topic)
+    const existing = getLocalRoadmap(topic)
+    const entry = {
+        topic,
+        data,
+        savedAt: existing?.savedAt || Date.now(),
+        lastGeneratedAt: Date.now(),
+        source: 'template',
+        progress: existing?.progress || {},
+    }
+    localStorage.setItem(key, JSON.stringify(entry))
+    addToIndex(INDEX_KEY, topic)
+}
 
-    if (user) {
-        // Save to Supabase
-        await supabase.from('roadmaps').upsert({
-            user_id: user.id,
-            topic,
-            data,
-            last_generated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,topic' })
-    } else {
-        // Fallback to localStorage
-        const key = roadmapKey(topic)
-        const existing = getLocalRoadmap(topic)
-        const entry = {
-            topic, data,
-            savedAt: existing?.savedAt || Date.now(),
-            lastGeneratedAt: Date.now(),
-            progress: existing?.progress || {},
-        }
-        localStorage.setItem(key, JSON.stringify(entry))
-        addToIndex(INDEX_KEY, topic)
+export function hasLocalRoadmap(topic) {
+    return !!getLocalRoadmap(topic)
+}
+
+// ─── Save roadmap ─────────────────────────────────────────
+/** @param {{ localOnly?: boolean, skipCloud?: boolean }} [options] */
+export async function saveRoadmap(topic, data, options = {}) {
+    const { localOnly = false, skipCloud = false } = options
+
+    saveRoadmapLocal(topic, data)
+
+    if (localOnly || skipCloud) return
+
+    const user = await getUser()
+    if (!user) return
+
+    const { error } = await supabase.from('roadmaps').upsert({
+        user_id: user.id,
+        topic,
+        data,
+        last_generated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,topic' })
+
+    if (error) {
+        const err = new Error(supabaseErrorMessage(error, 'Failed to save roadmap to cloud'))
+        err.cloudFailed = true
+        err.localSaved = true
+        throw err
     }
 }
 
 // ─── Get one roadmap ──────────────────────────────────────
 export async function getRoadmap(topic) {
+    const local = normalizeRoadmapRow(getLocalRoadmap(topic))
     const user = await getUser()
 
-    if (user) {
-        const { data } = await supabase
-            .from('roadmaps')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('topic', topic)
-            .single()
-        return data || null
-    } else {
-        return getLocalRoadmap(topic)
+    if (!user) return local
+
+    const { data, error } = await supabase
+        .from('roadmaps')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('topic', topic)
+        .maybeSingle()
+
+    if (error) {
+        console.error('getRoadmap cloud error:', error)
+        return local
     }
+
+    if (data) return data
+    return local
 }
 
 // ─── Get all roadmaps ─────────────────────────────────────
@@ -100,40 +141,38 @@ export async function getAllRoadmaps() {
             .select('*')
             .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false })
-        console.log('getAllRoadmaps result:', data, 'error:', error)
-        return data || []
-    } else {
-        return getIndex(INDEX_KEY)
+
+        if (error) {
+            console.error('getAllRoadmaps cloud error:', error)
+        }
+
+        const cloud = data || []
+        const cloudTopics = new Set(cloud.map(r => r.topic))
+        const localOnly = getIndex(INDEX_KEY)
+            .filter(t => !cloudTopics.has(t))
             .map(topic => getLocalRoadmap(topic))
             .filter(Boolean)
+
+        return [...cloud, ...localOnly]
     }
+
+    return getIndex(INDEX_KEY)
+        .map(topic => getLocalRoadmap(topic))
+        .filter(Boolean)
 }
 
 // ─── Delete roadmap ───────────────────────────────────────
 export async function deleteRoadmap(topic) {
     const user = await getUser()
 
+    localStorage.removeItem(roadmapKey(topic))
+    removeFromIndex(INDEX_KEY, topic)
+    localStorage.removeItem(progressKey(topic))
+
     if (user) {
-        await supabase
-            .from('roadmaps')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('topic', topic)
-        // also delete progress
-        await supabase
-            .from('progress')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('topic', topic)
-        // delete career cache
-        await supabase
-            .from('career_cache')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('topic', topic)
-    } else {
-        localStorage.removeItem(roadmapKey(topic))
-        removeFromIndex(INDEX_KEY, topic)
+        await supabase.from('roadmaps').delete().eq('user_id', user.id).eq('topic', topic)
+        await supabase.from('progress').delete().eq('user_id', user.id).eq('topic', topic)
+        await supabase.from('career_cache').delete().eq('user_id', user.id).eq('topic', topic)
     }
 }
 
@@ -158,53 +197,85 @@ export async function getProgress(topic) {
     const user = await getUser()
 
     if (user) {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('progress')
             .select('done_keys')
             .eq('user_id', user.id)
             .eq('topic', topic)
-            .single()
-        return data?.done_keys || {}
-    } else {
-        return loadLocalProgress(topic)
+            .maybeSingle()
+        if (error) console.error('getProgress error:', error)
+        if (data?.done_keys) return data.done_keys
     }
+    return loadLocalProgress(topic)
 }
 
-// ─── Career cache ─────────────────────────────────────────
-export async function saveCareerRoadmap(topic, career, data) {
-    const user = await getUser()
+// ─── Career cache (AI-generated career roadmaps) ──────────
+function getLocalCareerRoadmap(topic, career) {
+    try {
+        const raw = localStorage.getItem(careerKey(topic, career))
+        return raw ? JSON.parse(raw) : null
+    } catch { return null }
+}
 
-    if (user) {
-        await supabase.from('career_cache').upsert({
-            user_id: user.id,
-            topic,
-            career,
-            data,
-        }, { onConflict: 'user_id,topic,career' })
-    } else {
-        const key = careerKey(topic, career)
-        localStorage.setItem(key, JSON.stringify({ topic, career, data, savedAt: Date.now() }))
+export function saveCareerRoadmapLocal(topic, career, data) {
+    localStorage.setItem(careerKey(topic, career), JSON.stringify({
+        topic,
+        career,
+        data,
+        generatedBy: 'ai',
+        savedAt: Date.now(),
+    }))
+}
+
+export async function saveCareerRoadmap(topic, career, data) {
+    saveCareerRoadmapLocal(topic, career, data)
+
+    const user = await getUser()
+    if (!user) return
+
+    const { error } = await supabase.from('career_cache').upsert({
+        user_id: user.id,
+        topic,
+        career,
+        data,
+    }, { onConflict: 'user_id,topic,career' })
+
+    if (error) {
+        const err = new Error(supabaseErrorMessage(error, 'Failed to save career roadmap to cloud'))
+        err.cloudFailed = true
+        err.localSaved = true
+        throw err
     }
 }
 
 export async function getCareerRoadmap(topic, career) {
+    const local = getLocalCareerRoadmap(topic, career)
     const user = await getUser()
 
-    if (user) {
-        const { data } = await supabase
-            .from('career_cache')
-            .select('data')
-            .eq('user_id', user.id)
-            .eq('topic', topic)
-            .eq('career', career)
-            .single()
-        return data ? { data: data.data } : null
-    } else {
-        try {
-            const raw = localStorage.getItem(careerKey(topic, career))
-            return raw ? JSON.parse(raw) : null
-        } catch { return null }
+    if (!user) return local
+
+    const { data, error } = await supabase
+        .from('career_cache')
+        .select('data')
+        .eq('user_id', user.id)
+        .eq('topic', topic)
+        .eq('career', career)
+        .maybeSingle()
+
+    if (error) {
+        console.error('getCareerRoadmap cloud error:', error)
+        return local
     }
+
+    if (data?.data) {
+        return { data: data.data, generatedBy: 'ai' }
+    }
+    return local
+}
+
+/** True if this career sheet was already generated via Gemini. */
+export function isAiCareerCache(cached) {
+    return !!(cached?.data && cached.generatedBy === 'ai')
 }
 
 // ─── Rate limiting ────────────────────────────────────────
@@ -266,7 +337,7 @@ export async function generationsLeft() {
     return Math.max(0, 3 - count)
 }
 
-// ─── Local helpers (used as fallback) ─────────────────────
+// ─── Local helpers ────────────────────────────────────────
 function getLocalRoadmap(topic) {
     try {
         const raw = localStorage.getItem(roadmapKey(topic))

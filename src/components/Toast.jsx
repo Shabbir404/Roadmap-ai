@@ -19,6 +19,7 @@ export function ToastContainer({ toasts }) {
         success: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', color: '#10B981', icon: '✓' },
         info: { bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.3)', color: '#60A5FA', icon: '⚡' },
         warn: { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', color: '#F59E0B', icon: '⚠' },
+        error: { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)', color: '#EF4444', icon: '✕' },
     }
 
     return (

@@ -9,7 +9,8 @@ import CareerSheet from '../components/CareerSheet.jsx'
 import LoadingScreen from '../components/LoadingScreen.jsx'
 import { useToast, ToastContainer } from '../components/Toast.jsx'
 import { generateResult } from '../utils/ai.js'
-import { saveRoadmap, getRoadmap, canRefresh, timeUntilRefresh, timeAgo } from '../utils/storage.js'
+import { getTemplateByTopic, templateToRoadmapData } from '../data/templates.js'
+import { saveRoadmap, saveRoadmapLocal, getRoadmap, canRefresh, timeUntilRefresh, timeAgo } from '../utils/storage.js'
 import { canGenerate, incrementGeneration, generationsLeft, resetTime } from '../utils/rateLimit.js'
 
 function Skeleton() {
@@ -42,13 +43,17 @@ export default function Result() {
   const { toggle, isTopicDone, doneCount, totalTopics, percent, phaseProgress, reset } = useProgress(topic, data?.phases)
   const [search, setSearch] = useState('')
   const isReadOnly = params.get('shared') === 'true'
+  const isTemplateSource = params.get('source') === 'template'
   const [limitReached, setLimitReached] = useState(false)
-
+  const [genError, setGenError] = useState(null)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     if (!topic) return
     setLoading(true)
     setData(null)
+    setGenError(null)
+    setLimitReached(false)
 
     // Check shared link first
     const sharedData = params.get('data')
@@ -64,37 +69,67 @@ export default function Result() {
 
     // Async load
     const load = async () => {
-      const cached = await getRoadmap(topic)
-      if (cached) {
-        setData(cached.data)
-        setFromCache(true)
-        setCachedAt(cached.last_generated_at || cached.lastGeneratedAt)
-        setLoading(false)
-        return
-      }
+      try {
+        // Built-in templates: static data only — never call Gemini
+        if (isTemplateSource) {
+          const builtIn = getTemplateByTopic(topic)
+          if (!builtIn) {
+            setGenError(`Template not found for "${topic}".`)
+            setLoading(false)
+            return
+          }
+          const templateData = templateToRoadmapData(builtIn)
+          saveRoadmapLocal(topic, templateData)
+          setData(templateData)
+          setFromCache(true)
+          setCachedAt(Date.now())
+          setLoading(false)
+          return
+        }
 
-      // Check rate limit
-      const ok = await canGenerate()
-      if (!ok) {
-        setLimitReached(true)
-        setLoading(false)
-        return
-      }
+        const cached = await getRoadmap(topic)
+        if (cached?.data) {
+          setData(cached.data)
+          setFromCache(true)
+          setCachedAt(cached.last_generated_at || cached.lastGeneratedAt)
+          setLoading(false)
+          return
+        }
 
-      // Generate
-      const d = await generateResult(topic)
-      await incrementGeneration()
-      await saveRoadmap(topic, d)
-      setData(d)
-      setFromCache(false)
-      setCachedAt(Date.now())
-      setLoading(false)
-      const left = await generationsLeft()
-      showToast(`✨ Roadmap saved! ${left} generation${left !== 1 ? 's' : ''} left today.`, 'success')
+        const ok = await canGenerate()
+        if (!ok) {
+          setLimitReached(true)
+          setLoading(false)
+          return
+        }
+
+        const d = await generateResult(topic)
+        await incrementGeneration()
+        try {
+          await saveRoadmap(topic, d)
+        } catch (saveErr) {
+          if (saveErr.localSaved) {
+            showToast(saveErr.message, 'warn')
+          } else {
+            throw saveErr
+          }
+        }
+        setData(d)
+        setFromCache(false)
+        setCachedAt(Date.now())
+        setLoading(false)
+        const left = await generationsLeft()
+        showToast(`✨ Roadmap saved! ${left} generation${left !== 1 ? 's' : ''} left today.`, 'success')
+      } catch (e) {
+        console.error('Roadmap load/generate failed:', e)
+        setGenError(e?.message || 'Failed to generate roadmap. Check your API key and try again.')
+        setLoading(false)
+        showToast(e?.message || 'AI generation failed', 'error')
+      }
     }
 
     load()
-  }, [topic])
+  }, [topic, retryKey, isTemplateSource])
 
   function openCareer(career) {
     setSelectedCareer(career)
@@ -122,38 +157,26 @@ export default function Result() {
     const ok = await canRefresh(topic)
     if (!ok) return
     setRefreshing(true)
-    const d = await generateResult(topic)
-    await saveRoadmap(topic, d)
-    setData(d)
-    setFromCache(false)
-    setCachedAt(Date.now())
-    setRefreshing(false)
-  }
-  const [genLeft, setGenLeft] = useState(3)
-
-  useEffect(() => {
-    {
-      !loading && !isReadOnly && !limitReached && (
-        <div style={{
-          padding: '5px 12px', borderRadius: 99,
-          background: genLeft <= 1
-            ? 'rgba(239,68,68,0.08)'
-            : 'rgba(255,255,255,0.04)',
-          border: `1px solid ${genLeft <= 1
-            ? 'rgba(239,68,68,0.2)'
-            : 'rgba(255,255,255,0.08)'}`,
-        }}>
-          <span style={{
-            fontFamily: 'Space Grotesk', fontSize: '0.75rem', fontWeight: 600,
-            color: genLeft <= 1 ? '#EF4444' : 'rgba(255,255,255,0.35)',
-          }}>
-            {genLeft}/3 left today
-          </span>
-        </div>
-      )
+    setGenError(null)
+    try {
+      const d = await generateResult(topic)
+      try {
+        await saveRoadmap(topic, d)
+      } catch (saveErr) {
+        if (saveErr.localSaved) showToast(saveErr.message, 'warn')
+        else throw saveErr
+      }
+      setData(d)
+      setFromCache(false)
+      setCachedAt(Date.now())
+      showToast('Roadmap refreshed', 'success')
+    } catch (e) {
+      setGenError(e?.message || 'Refresh failed')
+      showToast(e?.message || 'Refresh failed', 'error')
+    } finally {
+      setRefreshing(false)
     }
-  }, [loading])
-
+  }
 
   return (
 
@@ -335,6 +358,59 @@ export default function Result() {
 
         {loading ? (
           <LoadingScreen topic={topic} />
+        ) : genError ? (
+          <div style={{
+            minHeight: '80vh', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '40px 24px', textAlign: 'center',
+            position: 'relative', zIndex: 10,
+          }}>
+            <div style={{ fontSize: 56, marginBottom: 24 }}>⚠️</div>
+            <h2 style={{
+              fontFamily: 'Space Grotesk', fontWeight: 700,
+              fontSize: 'clamp(1.5rem,3vw,2rem)',
+              color: 'rgba(255,255,255,0.9)',
+              letterSpacing: '-0.03em', marginBottom: 12,
+            }}>
+              Couldn't Generate Roadmap
+            </h2>
+            <p style={{
+              fontFamily: 'DM Sans', fontSize: '0.95rem',
+              color: 'rgba(255,255,255,0.45)', lineHeight: 1.75,
+              maxWidth: 480, marginBottom: 28,
+            }}>
+              {genError}
+            </p>
+            <p style={{
+              fontFamily: 'DM Sans', fontSize: '0.82rem',
+              color: 'rgba(255,255,255,0.28)', lineHeight: 1.6,
+              maxWidth: 420, marginBottom: 32,
+            }}>
+              Local dev: add <code style={{ color: '#60A5FA' }}>GEMINI_API_KEY</code> to a <code style={{ color: '#60A5FA' }}>.env</code> file.
+              Production: set <code style={{ color: '#60A5FA' }}>GEMINI_API_KEY</code> (and optional <code style={{ color: '#60A5FA' }}>GEMINI_MODEL</code>) in Vercel → Settings → Environment Variables, then redeploy.
+            </p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                onClick={() => setRetryKey(k => k + 1)}
+                style={{
+                  padding: '12px 28px', borderRadius: 99, cursor: 'pointer',
+                  background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                  border: 'none', fontFamily: 'Space Grotesk',
+                  fontSize: '0.9rem', fontWeight: 600, color: 'white',
+                }}
+              >Try Again</button>
+              <button
+                onClick={() => navigate('/')}
+                style={{
+                  padding: '12px 24px', borderRadius: 99, cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  fontFamily: 'DM Sans', fontSize: '0.88rem',
+                  color: 'rgba(255,255,255,0.45)',
+                }}
+              >← Back to Home</button>
+            </div>
+          </div>
         ) : limitReached ? (
           <div style={{
             minHeight: '80vh', display: 'flex', flexDirection: 'column',
@@ -717,6 +793,7 @@ export default function Result() {
             career={selectedCareer}
             topic={data?.topic || topic}
             onClose={closeCareer}
+            fromTemplate={isTemplateSource}
           />
         )
       }

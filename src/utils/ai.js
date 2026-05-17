@@ -122,21 +122,11 @@ Rules:
 
 // ─── Exports ──────────────────────────────────────────────
 export async function generateResult(topic) {
-    try {
-        return await callAI(buildPrompt(topic))
-    } catch (e) {
-        console.error('AI error:', e)
-        return getMockResult(topic)
-    }
+    return callAI(buildPrompt(topic))
 }
 
 export async function generateCareerRoadmap(topic, career) {
-    try {
-        return await callAI(careerPrompt(topic, career))
-    } catch (e) {
-        console.error('AI error:', e)
-        return getMockCareerRoadmap(topic, career)
-    }
+    return callAI(careerPrompt(topic, career))
 }
 
 // ─── Mock data ────────────────────────────────────────────

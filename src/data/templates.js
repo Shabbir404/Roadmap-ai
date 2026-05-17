@@ -389,3 +389,20 @@ export const TEMPLATES = [
         intro: 'Flutter lets you write one codebase and ship to iOS, Android, web, and desktop. It is Google-backed, growing fast, and the job market is less saturated than React Native. Perfect timing to learn.',
     },
 ]
+
+/** Match URL topic param to a built-in template (no API). */
+export function getTemplateByTopic(topic) {
+    if (!topic) return null
+    const key = topic.trim().toLowerCase()
+    return TEMPLATES.find(t => t.topic.trim().toLowerCase() === key) || null
+}
+
+/** Shape stored in roadmaps / shown on Result page. */
+export function templateToRoadmapData(template) {
+    return {
+        topic: template.topic,
+        intro: template.intro,
+        phases: template.phases,
+        careers: template.careers,
+    }
+}

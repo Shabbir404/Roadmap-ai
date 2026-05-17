@@ -1,32 +1,32 @@
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
-import { TEMPLATES } from '../data/templates.js'
-import { saveRoadmap, getRoadmap } from '../utils/storage.js'
+import { TEMPLATES, templateToRoadmapData } from '../data/templates.js'
+import { saveRoadmapLocal, hasLocalRoadmap } from '../utils/storage.js'
 
 const ALL_TAGS = ['All', 'Beginner Friendly', 'Programming', 'Web Dev', 'AI', 'Data Science', 'Design', 'Security', 'Mobile', 'Advanced']
 
 export default function Templates() {
     const navigate = useNavigate()
     const [activeTag, setActiveTag] = useState('All')
+    const [savedTopics, setSavedTopics] = useState(() => new Set())
+
+    useEffect(() => {
+        const topics = new Set(
+            TEMPLATES.filter(t => hasLocalRoadmap(t.topic)).map(t => t.topic)
+        )
+        setSavedTopics(topics)
+    }, [])
 
     const filtered = activeTag === 'All'
         ? TEMPLATES
         : TEMPLATES.filter(t => t.tags.includes(activeTag))
 
     function useTemplate(template) {
-        // Save template as a roadmap (no API call needed)
-        const existing = getRoadmap(template.topic)
-        if (!existing) {
-            saveRoadmap(template.topic, {
-                topic: template.topic,
-                intro: template.intro,
-                phases: template.phases,
-                careers: template.careers,
-            })
-        }
-        navigate(`/result?topic=${encodeURIComponent(template.topic)}`)
+        saveRoadmapLocal(template.topic, templateToRoadmapData(template))
+        setSavedTopics(prev => new Set([...prev, template.topic]))
+        navigate(`/result?topic=${encodeURIComponent(template.topic)}&source=template`)
     }
 
     return (
@@ -140,7 +140,7 @@ export default function Templates() {
                     gap: 18,
                 }}>
                     {filtered.map((template, i) => {
-                        const alreadySaved = !!getRoadmap(template.topic)
+                        const alreadySaved = savedTopics.has(template.topic)
                         return (
                             <div
                                 key={template.id}

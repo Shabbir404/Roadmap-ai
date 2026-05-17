@@ -222,7 +222,9 @@ export default function Roadmaps() {
                                     border: `1px solid ${isComplete ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.08)'}`,
                                     transition: 'all 0.3s ease', position: 'relative',
                                 }}
-                                onClick={() => navigate(`/result?topic=${encodeURIComponent(rm.topic)}`)}
+                                onClick={() => navigate(
+                                    `/result?topic=${encodeURIComponent(rm.topic)}${rm.source === 'template' ? '&source=template' : ''}`
+                                )}
                                 onMouseEnter={e => {
                                     e.currentTarget.style.borderColor = isComplete ? 'rgba(16,185,129,0.5)' : 'rgba(96,165,250,0.3)'
                                     e.currentTarget.style.transform = 'translateY(-3px)'

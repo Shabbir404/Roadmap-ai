@@ -1,4 +1,4 @@
-import { saveCareerRoadmap, getCareerRoadmap } from '../utils/storage.js'
+import { saveCareerRoadmap, getCareerRoadmap, isAiCareerCache } from '../utils/storage.js'
 import { useState, useEffect } from 'react'
 import { generateCareerRoadmap } from '../utils/ai.js'
 import { useProgress } from '../hooks/useProgress.js'
@@ -153,28 +153,54 @@ function PhaseRow({ phase, topic, index, isTopicDone, onToggle, phaseProgress })
   );
 }
 
-export default function CareerSheet({ career, topic, onClose }) {
+export default function CareerSheet({ career, topic, onClose, fromTemplate = false }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
 
   const progressKey = `${topic}__${career.title}`
   const { toggle, isTopicDone, doneCount, totalTopics, percent, phaseProgress, reset } = useProgress(progressKey, data?.phases)
 
   useEffect(() => {
-    // Check cache first
-    const cached = getCareerRoadmap(topic, career.title)
-    if (cached) {
-      setData(cached.data)
-      setLoading(false)
-      return
+    let cancelled = false
+
+    async function load() {
+      setLoading(true)
+      setLoadError(null)
+      try {
+        const cached = await getCareerRoadmap(topic, career.title)
+        if (cancelled) return
+
+        // Template main roadmap is local-only; career sheets must use Gemini.
+        // Reuse cache only when a prior AI career roadmap exists.
+        const canUseCache = isAiCareerCache(cached)
+        if (canUseCache) {
+          setData(cached.data)
+          return
+        }
+
+        const d = await generateCareerRoadmap(topic, career.title)
+        if (cancelled) return
+        setData(d)
+        try {
+          await saveCareerRoadmap(topic, career.title, d)
+        } catch (saveErr) {
+          if (!saveErr.localSaved) throw saveErr
+          console.warn('Career roadmap cloud save failed:', saveErr.message)
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error('Career roadmap failed:', e)
+          setLoadError(e?.message || 'Failed to generate career roadmap')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-    // Not cached — generate and save
-    generateCareerRoadmap(topic, career.title).then(d => {
-      setData(d)
-      saveCareerRoadmap(topic, career.title, d)
-      setLoading(false)
-    })
-  }, [topic, career.title])
+
+    load()
+    return () => { cancelled = true }
+  }, [topic, career.title, fromTemplate])
 
   return (
     <>
@@ -231,8 +257,35 @@ export default function CareerSheet({ career, topic, onClose }) {
                 textAlign: 'center', marginTop: 20, fontFamily: 'DM Sans',
                 fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)',
               }}>
-                Building your {career.title} roadmap...
+                {fromTemplate
+                  ? `AI is building your ${career.title} career path...`
+                  : `Building your ${career.title} roadmap...`}
               </div>
+            </div>
+          ) : loadError ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <p style={{
+                fontFamily: 'DM Sans', fontSize: '0.9rem',
+                color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, marginBottom: 16,
+              }}>{loadError}</p>
+              <button
+                onClick={() => {
+                  setLoadError(null)
+                  setLoading(true)
+                  generateCareerRoadmap(topic, career.title)
+                    .then(async d => {
+                      setData(d)
+                      await saveCareerRoadmap(topic, career.title, d)
+                    })
+                    .catch(e => setLoadError(e?.message || 'Failed again'))
+                    .finally(() => setLoading(false))
+                }}
+                style={{
+                  padding: '10px 20px', borderRadius: 10, cursor: 'pointer',
+                  background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.3)',
+                  color: '#60A5FA', fontFamily: 'Space Grotesk', fontSize: '0.85rem', fontWeight: 600,
+                }}
+              >Try Again</button>
             </div>
           ) : data ? (
             <div>
