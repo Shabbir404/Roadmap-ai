@@ -33,27 +33,27 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
 
+  const { user, signOut, loading: authLoading } = useAuth()
+  const [showAuth, setShowAuth] = useState(false)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+
   const [recentRoadmaps, setRecentRoadmaps] = useState([])
+  const [globalStats, setGlobalStats] = useState({ total: 0, completedTopics: 0 })
 
   useEffect(() => {
     if (authLoading) return
     getAllRoadmaps().then(all => setRecentRoadmaps(all.slice(0, 3)))
   }, [authLoading, user])
 
-  const { user, signOut, loading: authLoading } = useAuth()
-  const [showAuth, setShowAuth] = useState(false)
-  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
-
-
-  const [globalStats, setGlobalStats] = useState({ total: 0, completedTopics: 0 })
   useEffect(() => {
+    if (authLoading) return
     getAllRoadmaps().then(all => {
       const completedTopics = all.reduce((sum, rm) => {
         return sum + Object.keys(getStandaloneProgress(rm.topic)).length
       }, 0)
       setGlobalStats({ total: all.length, completedTopics })
     })
-  }, [])
+  }, [authLoading, user])
 
   function go(q) {
     const t = (q || query).trim()
