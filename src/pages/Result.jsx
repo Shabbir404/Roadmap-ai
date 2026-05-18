@@ -40,6 +40,7 @@ export default function Result() {
   const [params] = useSearchParams()
   const topic = params.get('topic') || ''
   const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -74,6 +75,7 @@ export default function Result() {
 
   useEffect(() => {
     if (!topic) return
+    if (authLoading) return
     setLoading(true)
     setData(null)
     setGenError(null)
@@ -152,7 +154,7 @@ export default function Result() {
     }
 
     load()
-  }, [topic, retryKey, isTemplateSource, user])
+  }, [topic, retryKey, isTemplateSource, user, authLoading])
 
   function openCareer(career) {
     setSelectedCareer(career)

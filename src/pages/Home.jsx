@@ -34,13 +34,17 @@ export default function Home() {
   const navigate = useNavigate()
 
   const [recentRoadmaps, setRecentRoadmaps] = useState([])
+  const { user, loading: authLoading } = useAuth()
+
   useEffect(() => {
+    if (authLoading) return
     getAllRoadmaps().then(all => setRecentRoadmaps(all.slice(0, 3)))
-  }, [])
+  }, [authLoading, user])
 
   const { user, signOut } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+
 
   const [globalStats, setGlobalStats] = useState({ total: 0, completedTopics: 0 })
   useEffect(() => {

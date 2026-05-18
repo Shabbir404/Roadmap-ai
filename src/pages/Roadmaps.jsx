@@ -1,3 +1,4 @@
+import { useAuth } from '../contexts/AuthContext.jsx'
 import Navbar from '../components/Navbar.jsx'
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -9,10 +10,12 @@ import { getAllRoadmaps, deleteRoadmap, timeAgo, getStandaloneProgress } from '.
 export default function Roadmaps() {
     const [roadmaps, setRoadmaps] = useState([])
     const navigate = useNavigate()
+    const { user, loading: authLoading } = useAuth()
 
     useEffect(() => {
+        if (authLoading) return
         getAllRoadmaps().then(data => setRoadmaps(data || []))
-    }, [])
+    }, [authLoading, user])
 
     const stats = useMemo(() => {
         const totalRoadmaps = roadmaps.length
