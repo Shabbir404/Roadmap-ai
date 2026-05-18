@@ -19,6 +19,7 @@ import {
   getRoadmapQuota,
   migrateLegacyLimits,
 } from '../utils/generationLimits.js'
+import Navbar from '../components/Navbar.jsx'
 
 function Skeleton() {
   return (
@@ -208,123 +209,34 @@ export default function Result() {
       <div style={{ position: 'fixed', bottom: -150, right: -100, width: 500, height: 500, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(139,92,246,0.08),transparent 70%)' }} />
 
       {/* Navbar */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 40px',
-        background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <button onClick={() => navigate('/')} style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: 'none', border: 'none', cursor: 'pointer',
-        }}>
+      <Navbar rightContent={
+        !loading && totalTopics > 0 ? (
           <div style={{
-            width: 34, height: 34, borderRadius: 9,
-            background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
-          }}>🧭</div>
-          <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)' }}>
-            Path <span style={{ color: '#60A5FA' }}>AI</span>
-          </span>
-        </button>
-
-        {/* Center nav links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {[
-            { label: 'Home', path: '/' },
-            { label: 'Roadmaps', path: '/roadmaps' },
-            { label: 'Demandable', path: '/templates' },
-          ].map(link => (
-            <button
-              key={link.label}
-              onClick={() => navigate(link.path)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: 'DM Sans', fontSize: '0.9rem',
-                color: 'rgba(255,255,255,0.4)',
-                padding: '6px 14px', borderRadius: 8, transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.9)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
-            >{link.label}</button>
-          ))}
-        </div>
-
-        {!loading && !isReadOnly && !isTemplateSource && quotaLabel && (
-          <div style={{
-            padding: '5px 12px', borderRadius: 99,
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '6px 12px', borderRadius: 99,
             background: 'rgba(255,255,255,0.04)',
             border: '1px solid rgba(255,255,255,0.08)',
           }}>
-            <span style={{
-              fontFamily: 'Space Grotesk', fontSize: '0.75rem', fontWeight: 600,
-              color: 'rgba(255,255,255,0.35)',
+            <div style={{
+              width: 50, height: 3, borderRadius: 99,
+              background: 'rgba(255,255,255,0.07)', overflow: 'hidden',
             }}>
-              {quotaLabel}
+              <div style={{
+                height: '100%', borderRadius: 99, width: `${percent}%`,
+                background: percent === 100
+                  ? 'linear-gradient(90deg,#10B981,#34D399)'
+                  : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
+              }} />
+            </div>
+            <span style={{
+              fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: '0.75rem',
+              color: percent === 100 ? '#10B981' : 'rgba(255,255,255,0.5)',
+            }}>
+              {percent === 100 ? '🎉' : `${percent}%`}
             </span>
           </div>
-        )}
-
-        {/* Right side — progress pill + new search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {!loading && totalTopics > 0 && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '6px 14px', borderRadius: 99,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
-              {/* Mini progress bar */}
-              <div style={{
-                width: 60, height: 4, borderRadius: 99,
-                background: 'rgba(255,255,255,0.07)', overflow: 'hidden',
-              }}>
-                <div style={{
-                  height: '100%', borderRadius: 99,
-                  width: `${percent}%`,
-                  background: percent === 100
-                    ? 'linear-gradient(90deg,#10B981,#34D399)'
-                    : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
-                  transition: 'width 0.4s ease',
-                }} />
-              </div>
-              <span style={{
-                fontFamily: 'Space Grotesk', fontWeight: 600,
-                fontSize: '0.78rem',
-                color: percent === 100 ? '#10B981' : 'rgba(255,255,255,0.5)',
-              }}>
-                {percent === 100 ? '🎉 Done' : `${percent}%`}
-              </span>
-              {!isReadOnly && (
-                <div style={{
-                  width: 1, height: 12,
-                  background: 'rgba(255,255,255,0.1)',
-                }} />
-              )}
-              {!isReadOnly && (
-                <span style={{
-                  fontFamily: 'DM Sans', fontSize: '0.75rem',
-                  color: 'rgba(255,255,255,0.25)',
-                }}>
-                  {doneCount}/{totalTopics}
-                </span>
-              )}
-            </div>
-          )}
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              padding: '8px 18px', borderRadius: 99, cursor: 'pointer',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.45)', fontFamily: 'DM Sans', fontSize: '0.85rem',
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
-          >← New Search</button>
-        </div>
-      </nav>
+        ) : null
+      } />
 
       {/* Main content — scales down when sheet is open (iOS effect) */}
       <div

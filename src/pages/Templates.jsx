@@ -4,6 +4,7 @@ import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
 import { TEMPLATES, templateToRoadmapData } from '../data/templates.js'
 import { saveRoadmapLocal, hasLocalRoadmap } from '../utils/storage.js'
+import Navbar from '../components/Navbar.jsx'
 
 const ALL_TAGS = ['All', 'Beginner Friendly', 'Programming', 'Web Dev', 'AI', 'Data Science', 'Design', 'Security', 'Mobile', 'Advanced']
 
@@ -35,54 +36,11 @@ export default function Templates() {
             <div style={{ position: 'fixed', top: -200, left: -150, width: 600, height: 600, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(59,130,246,0.1),transparent 70%)' }} />
 
             {/* Navbar */}
-            <nav style={{
-                position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '16px 40px',
-                background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(20px)',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-            }}>
-                <button onClick={() => navigate('/')} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    background: 'none', border: 'none', cursor: 'pointer',
-                }}>
-                    <div style={{
-                        width: 34, height: 34, borderRadius: 9,
-                        background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
-                    }}>🧭</div>
-                    <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)' }}>
-                        Path <span style={{ color: '#60A5FA' }}>AI</span>
-                    </span>
-                </button>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {[
-                        { label: 'Home', path: '/' },
-                        { label: 'Roadmaps', path: '/roadmaps' },
-                        { label: 'Demandable', path: '/templates' },
-                    ].map(link => (
-                        <button
-                            key={link.label}
-                            onClick={() => navigate(link.path)}
-                            style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                fontFamily: 'DM Sans', fontSize: '0.9rem',
-                                color: link.path === '/templates' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)',
-                                padding: '6px 14px', borderRadius: 8,
-                            }}
-                        >{link.label}</button>
-                    ))}
-                </div>
-
-                <div style={{
-                    padding: '6px 16px', borderRadius: 99,
-                    background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
-                    fontFamily: 'Space Grotesk', fontSize: '0.78rem', color: '#60A5FA', fontWeight: 500,
-                }}>
-                    ⚡ Developed by Shabbir
-                </div>
-            </nav>
+            <Navbar rightContent={
+                // pass page-specific content like progress pill here
+                // if nothing needed just pass null
+                null
+            } />
 
             <div style={{ position: 'relative', zIndex: 10, maxWidth: 960, margin: '0 auto', padding: '100px 24px 80px' }}>
 
