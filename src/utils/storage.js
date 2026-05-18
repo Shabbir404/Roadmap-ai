@@ -136,7 +136,7 @@ export async function getAllRoadmaps() {
             .select('*')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
-
+        console.log('cloud roadmaps:', data?.length, 'error:', error?.message)
         if (!error && data) {
             // Merge with any local-only roadmaps not yet in cloud
             const cloudTopics = new Set(data.map(r => r.topic))

@@ -25,7 +25,7 @@ export default async function handler(req, res) {
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: {
                         temperature: 0.75,
-                        maxOutputTokens: 3000,
+                        maxOutputTokens: 8192,
                     },
                 }),
             }
@@ -48,7 +48,15 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'No JSON found in response' })
         }
 
-        const parsed = JSON.parse(clean.slice(start, end + 1))
+        const jsonString = clean.slice(start, end + 1);
+        let parsed;
+        try {
+            parsed = JSON.parse(jsonString);
+        } catch (parseError) {
+            console.error("JSON Parsing Error: ", parseError.message);
+            console.error("Problematic JSON string: ", jsonString.substring(0, 500) + (jsonString.length > 500 ? "..." : "")); // Log first 500 chars
+            return res.status(500).json({ error: `Failed to parse AI response: ${parseError.message}`, rawResponseSnippet: jsonString.substring(0, 500) });
+        }
         return res.status(200).json(parsed)
 
     } catch (err) {
