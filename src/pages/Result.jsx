@@ -59,7 +59,6 @@ export default function Result() {
   const [retryKey, setRetryKey] = useState(0)
   const [quotaLabel, setQuotaLabel] = useState('')
   const [showAuth, setShowAuth] = useState(false)
-  const { user } = useAuth()
 
   useEffect(() => {
     migrateLegacyLimits()
