@@ -1,10 +1,10 @@
+import Navbar from '../components/Navbar.jsx'
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
 import { TEMPLATES, templateToRoadmapData } from '../data/templates.js'
 import { saveRoadmapLocal, hasLocalRoadmap } from '../utils/storage.js'
-import Navbar from '../components/Navbar.jsx'
 
 const ALL_TAGS = ['All', 'Beginner Friendly', 'Programming', 'Web Dev', 'AI', 'Data Science', 'Design', 'Security', 'Mobile', 'Advanced']
 

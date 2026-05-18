@@ -1,3 +1,4 @@
+import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import { useProgress } from '../hooks/useProgress.js'
 import { useState, useEffect } from 'react'
@@ -19,7 +20,7 @@ import {
   getRoadmapQuota,
   migrateLegacyLimits,
 } from '../utils/generationLimits.js'
-import Navbar from '../components/Navbar.jsx'
+
 
 function Skeleton() {
   return (

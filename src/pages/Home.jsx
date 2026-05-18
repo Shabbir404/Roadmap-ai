@@ -1,3 +1,4 @@
+import Navbar from '../components/Navbar.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import AuthModal from '../components/AuthModal.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
