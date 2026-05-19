@@ -1,3 +1,9 @@
+import {
+  canGenerateRoadmap,
+  incrementRoadmap,
+  getRoadmapQuota,
+  migrateLegacyLimits,
+} from '../utils/generationLimits.js'
 import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import { useProgress } from '../hooks/useProgress.js'
@@ -14,12 +20,7 @@ import { getTemplateByTopic, templateToRoadmapData } from '../data/templates.js'
 import { saveRoadmap, saveRoadmapLocal, getRoadmap, canRefresh, timeUntilRefresh, timeAgo } from '../utils/storage.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import AuthModal from '../components/AuthModal.jsx'
-import {
-  canGenerateRoadmap,
-  incrementRoadmap,
-  getRoadmapQuota,
-  migrateLegacyLimits,
-} from '../utils/generationLimits.js'
+
 
 
 function Skeleton() {
