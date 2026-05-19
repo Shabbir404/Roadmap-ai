@@ -130,7 +130,7 @@ export default function Result() {
         }
 
         const d = await generateResult(topic)
-        await incrementGeneration()
+        await incrementRoadmap(user)
         try {
           await saveRoadmap(topic, d)
         } catch (err) {
