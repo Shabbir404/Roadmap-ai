@@ -4,17 +4,23 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
-import { getAllRoadmaps, deleteRoadmap, timeAgo, getStandaloneProgress } from '../utils/storage.js'
+import { getAllRoadmaps, deleteRoadmap, timeAgo, getStandaloneProgress, getAllProgress } from '../utils/storage.js'
 
 
 export default function Roadmaps() {
     const [roadmaps, setRoadmaps] = useState([])
+    const [progressUpdated, setProgressUpdated] = useState(0)
     const navigate = useNavigate()
     const { user, loading: authLoading } = useAuth()
 
     useEffect(() => {
         if (authLoading) return
-        getAllRoadmaps().then(data => setRoadmaps(data || []))
+        getAllRoadmaps().then(data => {
+            setRoadmaps(data || [])
+            getAllProgress().then(() => {
+                setProgressUpdated(prev => prev + 1)
+            }).catch(err => console.error('Error fetching all progress:', err))
+        })
     }, [authLoading, user])
 
     const stats = useMemo(() => {
@@ -37,7 +43,7 @@ export default function Roadmaps() {
             return total > 0 && done === total
         }).length
         return { totalRoadmaps, totalTopics, completedTopics, bestRoadmap, completedRoadmaps }
-    }, [roadmaps])
+    }, [roadmaps, progressUpdated])
 
     async function handleDelete(topic, e) {
         e.stopPropagation()

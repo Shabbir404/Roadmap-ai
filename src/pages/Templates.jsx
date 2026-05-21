@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
 import { TEMPLATES, templateToRoadmapData } from '../data/templates.js'
-import { saveRoadmapLocal, hasLocalRoadmap } from '../utils/storage.js'
+import { saveRoadmap, hasLocalRoadmap } from '../utils/storage.js'
 
 const ALL_TAGS = ['All', 'Beginner Friendly', 'Programming', 'Web Dev', 'AI', 'Data Science', 'Design', 'Security', 'Mobile', 'Advanced']
 
@@ -24,8 +24,8 @@ export default function Templates() {
         ? TEMPLATES
         : TEMPLATES.filter(t => t.tags.includes(activeTag))
 
-    function useTemplate(template) {
-        saveRoadmapLocal(template.topic, templateToRoadmapData(template), 'template')
+    async function useTemplate(template) {
+        await saveRoadmap(template.topic, templateToRoadmapData(template), 'template')
         setSavedTopics(prev => new Set([...prev, template.topic]))
         navigate(`/result?topic=${encodeURIComponent(template.topic)}&source=template`)
     }

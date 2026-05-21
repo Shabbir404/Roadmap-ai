@@ -87,9 +87,10 @@ export function hasLocalRoadmap(topic) {
 }
 
 // ─── Save roadmap ─────────────────────────────────────────
-export async function saveRoadmap(topic, data) {
+// ─── Save roadmap ─────────────────────────────────────────
+export async function saveRoadmap(topic, data, source = 'ai') {
     // Always save locally first
-    saveRoadmapLocal(topic, data)
+    saveRoadmapLocal(topic, data, source)
 
     const user = await getUser()
     if (!user) return
@@ -98,6 +99,7 @@ export async function saveRoadmap(topic, data) {
         user_id: user.id,
         topic,
         data,
+        source,
         last_generated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,topic' })
 
@@ -116,7 +118,11 @@ export async function getRoadmap(topic) {
             .eq('topic', topic)
             .maybeSingle()
 
-        if (!error && data) return data
+        if (!error && data) {
+            // Cache locally so it is available offline and integrated in local index
+            saveRoadmapLocal(topic, data.data, data.source || 'ai')
+            return data
+        }
     }
 
     // Fallback to localStorage
@@ -138,6 +144,13 @@ export async function getAllRoadmaps() {
             .order('created_at', { ascending: false })
         console.log('cloud roadmaps:', data?.length, 'error:', error?.message)
         if (!error && data) {
+            // Cache cloud roadmaps locally
+            for (const rm of data) {
+                if (rm.data) {
+                    saveRoadmapLocal(rm.topic, rm.data, rm.source || 'ai')
+                }
+            }
+
             // Merge with any local-only roadmaps not yet in cloud
             const cloudTopics = new Set(data.map(r => r.topic))
             const localOnly = getIndex(INDEX_KEY)
@@ -196,10 +209,99 @@ export async function getProgress(topic) {
             .eq('topic', topic)
             .maybeSingle()
 
-        if (!error && data?.done_keys) return data.done_keys
+        if (!error && data?.done_keys) {
+            // Save locally as cache/backup
+            persistLocalProgress(topic, data.done_keys)
+            return data.done_keys
+        }
     }
 
     return loadLocalProgress(topic)
+}
+
+export async function getAllProgress() {
+    const user = await getUser()
+    if (!user) return {}
+
+    const { data, error } = await supabase
+        .from('progress')
+        .select('topic, done_keys')
+        .eq('user_id', user.id)
+
+    if (error || !data) return {}
+
+    const allProgress = {}
+    data.forEach(item => {
+        allProgress[item.topic] = item.done_keys || {}
+        persistLocalProgress(item.topic, item.done_keys || {})
+    })
+    return allProgress
+}
+
+// ─── Cloud sync manager ───────────────────────────────────
+export async function syncLocalDataToCloud() {
+    const user = await getUser()
+    if (!user) return
+
+    const topics = getIndex(INDEX_KEY)
+    if (topics.length === 0) return
+
+    console.log(`Syncing ${topics.length} local roadmaps to cloud...`)
+
+    for (const topic of topics) {
+        const local = getLocalRoadmap(topic)
+        if (local && local.data) {
+            // 1. Sync roadmap metadata & structure
+            await supabase.from('roadmaps').upsert({
+                user_id: user.id,
+                topic,
+                data: local.data,
+                source: local.source || 'ai',
+                last_generated_at: new Date(local.lastGeneratedAt || Date.now()).toISOString(),
+            }, { onConflict: 'user_id,topic' })
+
+            // 2. Sync and merge progress
+            const localProg = loadLocalProgress(topic)
+            const { data: cloudProg } = await supabase
+                .from('progress')
+                .select('done_keys')
+                .eq('user_id', user.id)
+                .eq('topic', topic)
+                .maybeSingle()
+
+            const mergedProg = { ...cloudProg?.done_keys, ...localProg }
+            if (Object.keys(mergedProg).length > 0) {
+                await supabase.from('progress').upsert({
+                    user_id: user.id,
+                    topic,
+                    done_keys: mergedProg,
+                    updated_at: new Date().toISOString(),
+                }, { onConflict: 'user_id,topic' })
+
+                persistLocalProgress(topic, mergedProg)
+            }
+
+            // 3. Sync and cache careers associated with this roadmap
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i)
+                if (key && key.startsWith(`career__${topic.toLowerCase().trim().replace(/\s+/g, '_')}__`)) {
+                    try {
+                        const cached = JSON.parse(localStorage.getItem(key))
+                        if (cached && cached.data) {
+                            await supabase.from('career_cache').upsert({
+                                user_id: user.id,
+                                topic,
+                                career: cached.career,
+                                data: cached.data,
+                            }, { onConflict: 'user_id,topic,career' })
+                        }
+                    } catch (err) {
+                        console.error('Error syncing career cache key:', key, err)
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ─── Career cache ─────────────────────────────────────────

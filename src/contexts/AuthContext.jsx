@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../utils/supabase.js'
+import { syncLocalDataToCloud } from '../utils/storage.js'
 
 const AuthContext = createContext({})
 
@@ -10,13 +11,21 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         // Handle the OAuth redirect
         supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null)
+            const currentUser = session?.user ?? null
+            setUser(currentUser)
             setLoading(false)
+            if (currentUser) {
+                syncLocalDataToCloud().catch(err => console.error('Initial sync error:', err))
+            }
         })
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            setUser(session?.user ?? null)
+            const currentUser = session?.user ?? null
+            setUser(currentUser)
             setLoading(false)
+            if (currentUser && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+                syncLocalDataToCloud().catch(err => console.error('Auth change sync error:', err))
+            }
         })
 
         return () => subscription.unsubscribe()

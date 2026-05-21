@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getProgress, saveProgress } from '../utils/storage.js'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 export function useProgress(topic, phases) {
     const [done, setDone] = useState({})
     const [loaded, setLoaded] = useState(false)
+    const { user } = useAuth()
 
-    // Load progress when topic changes
+    // Load progress when topic or user changes
     useEffect(() => {
         if (!topic) return
         setLoaded(false)
@@ -13,7 +15,7 @@ export function useProgress(topic, phases) {
             setDone(saved || {})
             setLoaded(true)
         })
-    }, [topic])
+    }, [topic, user])
 
     const toggle = useCallback((phaseId, topicId) => {
         if (!loaded) return

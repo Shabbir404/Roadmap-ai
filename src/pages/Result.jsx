@@ -105,7 +105,7 @@ export default function Result() {
             return
           }
           const templateData = templateToRoadmapData(builtIn)
-          saveRoadmapLocal(topic, templateData)
+          await saveRoadmap(topic, templateData, 'template')
           setData(templateData)
           setFromCache(true)
           setCachedAt(Date.now())
