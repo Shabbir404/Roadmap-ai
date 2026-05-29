@@ -152,7 +152,7 @@ function PhaseRow({ phase, topic, index, isTopicDone, onToggle, phaseProgress })
   )
 }
 
-export default function CareerRoadmapContent({ career, topic, onClose, fromTemplate = false }) {
+export default function CareerRoadmapContent({ career, topic, fromTemplate = false }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
@@ -206,40 +206,26 @@ export default function CareerRoadmapContent({ career, topic, onClose, fromTempl
 
   return (
     <>
-      <div style={{ padding: '24px 28px 48px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12, fontSize: 22,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: `${career.color}18`, border: `1px solid ${career.color}30`,
+          }}>
+            {career.emoji}
+          </div>
+          <div>
             <div style={{
-              width: 44, height: 44, borderRadius: 12, fontSize: 22,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `${career.color}18`, border: `1px solid ${career.color}30`,
+              fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.1rem',
+              color: 'rgba(255,255,255,0.95)',
             }}>
-              {career.emoji}
+              {career.title}
             </div>
-            <div>
-              <div style={{
-                fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.1rem',
-                color: 'rgba(255,255,255,0.95)',
-              }}>
-                {career.title}
-              </div>
-              <div style={{ fontFamily: 'DM Sans', fontSize: '0.78rem', color: career.color }}>
-                Career Roadmap
-              </div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: '0.78rem', color: career.color }}>
+              Career Roadmap
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Back to roadmap"
-            style={{
-              width: 32, height: 32, borderRadius: 99, border: 'none', cursor: 'pointer',
-              background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)',
-              fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            ✕
-          </button>
         </div>
 
         {loading ? (

@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
+import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
+import NeuralBg from '../components/NeuralBg.jsx'
 import CareerRoadmapContent from '../components/CareerRoadmapContent.jsx'
 import { getRoadmap, getAllRoadmaps } from '../utils/storage.js'
 
@@ -76,24 +79,41 @@ export default function CareerRoadmap() {
         navigate(`/result?${q.toString()}`)
     }
 
+    const navRight = (
+        <button type="button" className="nav-btn-ghost" onClick={backToRoadmap}>
+            ← Back to roadmap
+        </button>
+    )
+
     return (
-        <div className="career-standalone">
-            {resolving || !career ? (
-                <div style={{ padding: '24px 28px 48px' }}>
-                    {[1, 2, 3].map(i => (
-                        <div key={i} style={{ marginBottom: 12 }}>
-                            <div className="skeleton" style={{ height: 64, borderRadius: 16 }} />
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <CareerRoadmapContent
-                    career={career}
-                    topic={resolvedTopic}
-                    onClose={backToRoadmap}
-                    fromTemplate={fromTemplate}
-                />
-            )}
+        <div className="page-shell">
+            <NeuralBg />
+            <div className="page-orb page-orb--blue" />
+            <div className="page-orb page-orb--purple" />
+
+            <Navbar rightContent={navRight} />
+
+            <main className="page-main">
+                <button type="button" className="career-back-link" onClick={backToRoadmap}>
+                    ← Back to {resolvedTopic || topic} roadmap
+                </button>
+
+                {resolving || !career ? (
+                    <div>
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="skeleton" style={{ height: 64, borderRadius: 16, marginBottom: 12 }} />
+                        ))}
+                    </div>
+                ) : (
+                    <CareerRoadmapContent
+                        career={career}
+                        topic={resolvedTopic}
+                        fromTemplate={fromTemplate}
+                    />
+                )}
+
+                <Footer />
+            </main>
         </div>
     )
 }

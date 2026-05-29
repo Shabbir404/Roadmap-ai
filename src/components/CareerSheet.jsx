@@ -7,7 +7,7 @@ export default function CareerSheet({ career, topic, onClose, fromTemplate = fal
       <div className="sheet-backdrop" onClick={onClose} role="presentation" />
       <div className="sheet-page">
         <div className="sheet-handle" />
-        <CareerRoadmapContent career={career} topic={topic} onClose={onClose} fromTemplate={fromTemplate} />
+        <CareerRoadmapContent career={career} topic={topic} fromTemplate={fromTemplate} />
       </div>
     </>
   )
