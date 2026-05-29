@@ -5,7 +5,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import PhaseCard from '../components/PhaseCard.jsx'
 import CareerCard from '../components/CareerCard.jsx'
-import CareerSheet from '../components/CareerSheet.jsx'
+import Navbar from '../components/Navbar.jsx'
 import LoadingScreen from '../components/LoadingScreen.jsx'
 import { useToast, ToastContainer } from '../components/Toast.jsx'
 import { generateResult } from '../utils/ai.js'
@@ -41,8 +41,6 @@ export default function Result() {
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [selectedCareer, setSelectedCareer] = useState(null)
-  const [pageScaled, setPageScaled] = useState(false)
   const [fromCache, setFromCache] = useState(false)
   const [cachedAt, setCachedAt] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -156,8 +154,9 @@ export default function Result() {
   }, [topic, retryKey, isTemplateSource, user])
 
   function openCareer(career) {
-    setSelectedCareer(career)
-    setPageScaled(true)
+    const q = new URLSearchParams({ topic: data?.topic || topic, career: career.title })
+    if (isTemplateSource) q.set('source', 'template')
+    navigate(`/career?${q.toString()}`)
   }
 
   function handleShare() {
@@ -170,11 +169,6 @@ export default function Result() {
     } catch {
       showToast('Failed to copy link', 'warn')
     }
-  }
-
-  function closeCareer() {
-    setSelectedCareer(null)
-    setPageScaled(false)
   }
 
   async function handleRefresh() {
@@ -202,145 +196,38 @@ export default function Result() {
     }
   }
 
-  return (
-
-    <div style={{ minHeight: '100vh', background: '#080810', position: 'relative' }}>
-      <NeuralBg />
-
-      {/* Orbs */}
-      <div style={{ position: 'fixed', top: -200, left: -150, width: 600, height: 600, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(59,130,246,0.1),transparent 70%)' }} />
-      <div style={{ position: 'fixed', bottom: -150, right: -100, width: 500, height: 500, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(139,92,246,0.08),transparent 70%)' }} />
-
-      {/* Navbar */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 40px',
-        background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <button onClick={() => navigate('/')} style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: 'none', border: 'none', cursor: 'pointer',
-        }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 9,
-            background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
-          }}>🧭</div>
-          <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)' }}>
-            Path <span style={{ color: '#60A5FA' }}>AI</span>
-          </span>
-        </button>
-
-        {/* Center nav links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {[
-            { label: 'Home', path: '/' },
-            { label: 'Roadmaps', path: '/roadmaps' },
-            { label: 'Demandable', path: '/templates' },
-          ].map(link => (
-            <button
-              key={link.label}
-              onClick={() => navigate(link.path)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: 'DM Sans', fontSize: '0.9rem',
-                color: 'rgba(255,255,255,0.4)',
-                padding: '6px 14px', borderRadius: 8, transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.9)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
-            >{link.label}</button>
-          ))}
-        </div>
-
-        {!loading && !isReadOnly && !isTemplateSource && quotaLabel && (
-          <div style={{
-            padding: '5px 12px', borderRadius: 99,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}>
-            <span style={{
-              fontFamily: 'Space Grotesk', fontSize: '0.75rem', fontWeight: 600,
-              color: 'rgba(255,255,255,0.35)',
-            }}>
-              {quotaLabel}
-            </span>
-          </div>
-        )}
-
-        {/* Right side — progress pill + new search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {!loading && totalTopics > 0 && (
+  const navRight = (
+    <div className="result-nav-right">
+      {!loading && !isReadOnly && !isTemplateSource && quotaLabel && (
+        <span className="nav-quota-label">{quotaLabel}</span>
+      )}
+      {!loading && totalTopics > 0 && (
+        <div className="nav-progress-pill">
+          <div className="nav-progress-bar">
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '6px 14px', borderRadius: 99,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
-              {/* Mini progress bar */}
-              <div style={{
-                width: 60, height: 4, borderRadius: 99,
-                background: 'rgba(255,255,255,0.07)', overflow: 'hidden',
-              }}>
-                <div style={{
-                  height: '100%', borderRadius: 99,
-                  width: `${percent}%`,
-                  background: percent === 100
-                    ? 'linear-gradient(90deg,#10B981,#34D399)'
-                    : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
-                  transition: 'width 0.4s ease',
-                }} />
-              </div>
-              <span style={{
-                fontFamily: 'Space Grotesk', fontWeight: 600,
-                fontSize: '0.78rem',
-                color: percent === 100 ? '#10B981' : 'rgba(255,255,255,0.5)',
-              }}>
-                {percent === 100 ? '🎉 Done' : `${percent}%`}
-              </span>
-              {!isReadOnly && (
-                <div style={{
-                  width: 1, height: 12,
-                  background: 'rgba(255,255,255,0.1)',
-                }} />
-              )}
-              {!isReadOnly && (
-                <span style={{
-                  fontFamily: 'DM Sans', fontSize: '0.75rem',
-                  color: 'rgba(255,255,255,0.25)',
-                }}>
-                  {doneCount}/{totalTopics}
-                </span>
-              )}
-            </div>
-          )}
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              padding: '8px 18px', borderRadius: 99, cursor: 'pointer',
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.45)', fontFamily: 'DM Sans', fontSize: '0.85rem',
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
-          >← New Search</button>
+              width: `${percent}%`,
+              background: percent === 100
+                ? 'linear-gradient(90deg,#10B981,#34D399)'
+                : 'linear-gradient(90deg,#3B82F6,#8B5CF6)',
+            }} />
+          </div>
+          <span>{percent === 100 ? 'Done' : `${percent}%`}</span>
+          {!isReadOnly && <span className="nav-progress-count">{doneCount}/{totalTopics}</span>}
         </div>
-      </nav>
+      )}
+      <button type="button" className="nav-btn-ghost" onClick={() => navigate('/')}>← New search</button>
+    </div>
+  )
 
-      {/* Main content — scales down when sheet is open (iOS effect) */}
-      <div
-        style={{
-          position: 'relative', zIndex: 10, paddingTop: 72,
-          transition: 'transform 0.4s cubic-bezier(0.32,0.72,0,1), border-radius 0.4s ease',
-          transform: pageScaled ? 'scale(0.93) translateY(-20px)' : 'scale(1) translateY(0)',
-          transformOrigin: 'top center',
-          borderRadius: pageScaled ? 28 : 0,
-          overflow: pageScaled ? 'hidden' : 'visible',
-        }}
-      >
+  return (
+    <div className="page-shell">
+      <NeuralBg />
+      <div className="page-orb page-orb--blue" />
+      <div className="page-orb page-orb--purple" />
+
+      <Navbar rightContent={navRight} />
+
+      <main className="page-main">
         {/* Read-only watermark banner */}
         {isReadOnly && (
           <div style={{
@@ -818,24 +705,12 @@ export default function Result() {
 
             <Footer />
           </div>
-        ) : null} {/* <-- Fixed: Added structural parenthesis layout close sequence here */}
-      </div>
+        ) : null}
+      </main>
 
-      {/* ── iPhone sheet ── */}
-      {
-        selectedCareer && (
-          <CareerSheet
-            career={selectedCareer}
-            topic={data?.topic || topic}
-            onClose={closeCareer}
-            fromTemplate={isTemplateSource}
-          />
-        )
-      }
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
       <ToastContainer toasts={toasts} />
-
-    </div >
+    </div>
   )
 }
 

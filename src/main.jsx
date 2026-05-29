@@ -6,6 +6,7 @@ import Home from './pages/Home.jsx'
 import Result from './pages/Result.jsx'
 import Roadmaps from './pages/Roadmaps.jsx'
 import Templates from './pages/Templates.jsx'
+import CareerRoadmap from './pages/CareerRoadmap.jsx'
 import './index.css'
 import { migrateLegacyLimits } from './utils/generationLimits.js'
 
@@ -18,6 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/result" element={<Result />} />
+          <Route path="/career" element={<CareerRoadmap />} />
           <Route path="/roadmaps" element={<Roadmaps />} />
           <Route path="/templates" element={<Templates />} />
         </Routes>

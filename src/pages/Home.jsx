@@ -1,6 +1,5 @@
+import Navbar from '../components/Navbar.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import AuthModal from '../components/AuthModal.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
@@ -31,10 +30,7 @@ const HOW_IT_WORKS = [
 export default function Home() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
-
-  const { user, signOut } = useAuth()
-  const [showAuth, setShowAuth] = useState(false)
-  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+  const { user } = useAuth()
 
   const [recentRoadmaps, setRecentRoadmaps] = useState([])
   const [recentProgress, setRecentProgress] = useState({})
@@ -73,161 +69,24 @@ export default function Home() {
     if (e.key === 'Enter') go()
   }
 
+  const navRight = globalStats.total > 0 ? (
+    <button type="button" className="nav-stats-chip" onClick={() => navigate('/roadmaps')}>
+      <span>🗺️ {globalStats.total} roadmap{globalStats.total !== 1 ? 's' : ''}</span>
+      {globalStats.completedTopics > 0 && <span className="nav-stats-done">{globalStats.completedTopics} ✓</span>}
+    </button>
+  ) : (
+    <span className="nav-credit-badge">⚡ Developed by Shabbir</span>
+  )
+
   return (
-    <div style={{ minHeight: '100vh', background: '#080810', position: 'relative', overflow: 'hidden' }}>
+    <div className="page-shell page-shell--home">
       <NeuralBg />
+      <div className="page-orb page-orb--blue" />
+      <div className="page-orb page-orb--purple" />
 
-      {/* Orbs */}
-      <div style={{ position: 'fixed', top: -200, left: -150, width: 600, height: 600, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(59,130,246,0.12),transparent 70%)' }} />
-      <div style={{ position: 'fixed', bottom: -150, right: -100, width: 500, height: 500, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(139,92,246,0.09),transparent 70%)' }} />
+      <Navbar rightContent={navRight} />
 
-      {/* Navbar */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 40px',
-        background: 'rgba(8,8,16,0.8)', backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 9,
-            background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
-          }}>🧭</div>
-          <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)' }}>
-            Path <span style={{ color: '#60A5FA' }}>AI</span>
-          </span>
-        </div>
-
-        {/* Nav links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {[
-            { label: 'Home', path: '/' },
-            { label: 'Roadmaps', path: '/roadmaps' },
-            { label: 'Demandable', path: '/templates' },
-          ].map(link => (
-            <button
-              key={link.label}
-              onClick={() => navigate(link.path)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: 'DM Sans', fontSize: '0.9rem',
-                color: link.path === '/' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)',
-                padding: '6px 14px', borderRadius: 8, transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.9)'}
-              onMouseLeave={e => e.currentTarget.style.color = link.path === '/' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)'}
-            >{link.label}</button>
-          ))}
-        </div>
-
-        {globalStats.total > 0 && (
-          <button
-            onClick={() => navigate('/roadmaps')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.3)'
-              e.currentTarget.style.background = 'rgba(96,165,250,0.08)'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-            }}
-          >
-            <span style={{ fontSize: 13 }}>🗺️</span>
-            <span style={{
-              fontFamily: 'Space Grotesk', fontWeight: 600,
-              fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)',
-            }}>
-              {globalStats.total} roadmap{globalStats.total !== 1 ? 's' : ''}
-            </span>
-            {globalStats.completedTopics > 0 && (
-              <>
-                <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.1)' }} />
-                <span style={{
-                  fontFamily: 'Space Grotesk', fontWeight: 600,
-                  fontSize: '0.78rem', color: '#10B981',
-                }}>
-                  {globalStats.completedTopics} ✓
-                </span>
-              </>
-            )}
-          </button>
-        )}
-        {/* Auth button */}
-        {user ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 14px', borderRadius: 99,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
-              <div style={{
-                width: 24, height: 24, borderRadius: 99,
-                background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, color: 'white', fontWeight: 700,
-                fontFamily: 'Space Grotesk',
-              }}>
-                {user.email?.[0].toUpperCase()}
-              </div>
-              <span style={{
-                fontFamily: 'DM Sans', fontSize: '0.82rem',
-                color: 'rgba(255,255,255,0.5)',
-                maxWidth: 120, overflow: 'hidden',
-                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {user.email}
-              </span>
-            </div>
-            <button
-              onClick={() => setShowSignOutConfirm(true)}
-              style={{
-                padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                fontFamily: 'DM Sans', fontSize: '0.82rem',
-                color: 'rgba(255,255,255,0.35)',
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
-            >Sign out</button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowAuth(true)}
-            className="btn-primary"
-            style={{ padding: '8px 20px' }}
-          >
-            Sign in
-          </button>
-        )}
-
-        {/* Auth Modal */}
-        <div style={{
-          padding: '6px 16px', borderRadius: 99,
-          background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
-          fontFamily: 'Space Grotesk', fontSize: '0.78rem', color: '#60A5FA', fontWeight: 500,
-        }}>
-          ⚡ Developed by Shabbir
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <div style={{
-        position: 'relative', zIndex: 10,
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '100px 24px 60px', textAlign: 'center',
-      }}>
+      <div className="home-hero">
         <div className="fu" style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
           padding: '6px 18px', borderRadius: 99, marginBottom: 28,
@@ -435,21 +294,6 @@ export default function Home() {
       )}
 
       <Footer />
-
-      {/* Auth Modal  */}
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-
-      <ConfirmModal
-        open={showSignOutConfirm}
-        title="Sign out?"
-        message="You'll stay signed in on this device until you confirm. Your saved roadmaps remain in your account."
-        confirmLabel="Sign out"
-        cancelLabel="Stay signed in"
-        danger
-        onConfirm={() => { setShowSignOutConfirm(false); signOut() }}
-        onCancel={() => setShowSignOutConfirm(false)}
-      />
-
     </div>
   )
 }
