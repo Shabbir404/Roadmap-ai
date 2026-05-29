@@ -1,49 +1,64 @@
-import { useAuth } from '../contexts/AuthContext.jsx'
-import Navbar from '../components/Navbar.jsx'
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
-import { getAllRoadmaps, deleteRoadmap, timeAgo, getStandaloneProgress, getAllProgress } from '../utils/storage.js'
+import { useAuth } from '../contexts/AuthContext.jsx'
+import { getAllRoadmaps, deleteRoadmap, timeAgo, getProgress } from '../utils/storage.js'
 
+function countDoneForRoadmap(rm, progressMap) {
+    const done = progressMap[rm.topic] || {}
+    const phases = rm.data?.phases || []
+    return phases.reduce((sum, phase) => {
+        const topics = phase.topics || []
+        return sum + topics.filter(t => done[`${phase.id}_${t.id}`]).length
+    }, 0)
+}
 
 export default function Roadmaps() {
     const [roadmaps, setRoadmaps] = useState([])
-    const [progressUpdated, setProgressUpdated] = useState(0)
+    const [progressMap, setProgressMap] = useState({})
     const navigate = useNavigate()
-    const { user, loading: authLoading } = useAuth()
+    const { user } = useAuth()
 
     useEffect(() => {
-        if (authLoading) return
-        getAllRoadmaps().then(data => {
-            setRoadmaps(data || [])
-            getAllProgress().then(() => {
-                setProgressUpdated(prev => prev + 1)
-            }).catch(err => console.error('Error fetching all progress:', err))
+        getAllRoadmaps().then(data => setRoadmaps(data || []))
+    }, [user?.id])
+
+    useEffect(() => {
+        if (!roadmaps.length) {
+            setProgressMap({})
+            return
+        }
+        let cancelled = false
+        Promise.all(
+            roadmaps.map(async rm => {
+                const prog = await getProgress(rm.topic)
+                return [rm.topic, prog]
+            })
+        ).then(entries => {
+            if (!cancelled) setProgressMap(Object.fromEntries(entries))
         })
-    }, [authLoading, user])
+        return () => { cancelled = true }
+    }, [roadmaps, user?.id])
 
     const stats = useMemo(() => {
         const totalRoadmaps = roadmaps.length
         const totalTopics = roadmaps.reduce((sum, rm) =>
             sum + (rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0), 0)
-        const completedTopics = roadmaps.reduce((sum, rm) => {
-            const progress = getStandaloneProgress(rm.topic)
-            return sum + Object.keys(progress).length
-        }, 0)
+        const completedTopics = roadmaps.reduce((sum, rm) => sum + countDoneForRoadmap(rm, progressMap), 0)
         const bestRoadmap = roadmaps.reduce((best, rm) => {
             const total = rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0
-            const done = Object.keys(getStandaloneProgress(rm.topic)).length
+            const done = countDoneForRoadmap(rm, progressMap)
             const pct = total > 0 ? Math.round((done / total) * 100) : 0
             return pct > (best.pct || 0) ? { topic: rm.topic, pct } : best
         }, {})
         const completedRoadmaps = roadmaps.filter(rm => {
             const total = rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0
-            const done = Object.keys(getStandaloneProgress(rm.topic)).length
+            const done = countDoneForRoadmap(rm, progressMap)
             return total > 0 && done === total
         }).length
         return { totalRoadmaps, totalTopics, completedTopics, bestRoadmap, completedRoadmaps }
-    }, [roadmaps, progressUpdated])
+    }, [roadmaps, progressMap])
 
     async function handleDelete(topic, e) {
         e.stopPropagation()
@@ -59,11 +74,64 @@ export default function Roadmaps() {
             <div style={{ position: 'fixed', top: -200, left: -150, width: 600, height: 600, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(59,130,246,0.1),transparent 70%)' }} />
 
             {/* Navbar */}
-            <Navbar rightContent={
-                // pass page-specific content like progress pill here
-                // if nothing needed just pass null
-                null
-            } />
+            <nav style={{
+                position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 40px',
+                background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(20px)',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+            }}>
+                <button onClick={() => navigate('/')} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                }}>
+                    <div style={{
+                        width: 34, height: 34, borderRadius: 9,
+                        background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
+                    }}>🧭</div>
+                    <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)' }}>
+                        Path <span style={{ color: '#60A5FA' }}>AI</span>
+                    </span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {[
+                        { label: 'Home', path: '/' },
+                        { label: 'Roadmaps', path: '/roadmaps' },
+                        { label: 'Templates', path: '/templates' },
+                    ].map(link => (
+                        <button
+                            key={link.label}
+                            onClick={() => navigate(link.path)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontFamily: 'DM Sans', fontSize: '0.9rem',
+                                color: link.path === '/roadmaps' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)',
+                                padding: '6px 14px', borderRadius: 8, transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.9)'}
+                            onMouseLeave={e => e.currentTarget.style.color = link.path === '/roadmaps' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)'}
+                        >{link.label}</button>
+                    ))}
+                    {roadmaps.length > 0 && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '6px 14px', borderRadius: 99,
+                            background: 'rgba(16,185,129,0.08)',
+                            border: '1px solid rgba(16,185,129,0.2)',
+                        }}>
+                            <span style={{ fontSize: 13 }}>✅</span>
+                            <span style={{
+                                fontFamily: 'Space Grotesk', fontWeight: 600,
+                                fontSize: '0.78rem', color: '#10B981',
+                            }}>
+                                {stats.completedTopics} topics done
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </nav>
 
             <div style={{ position: 'relative', zIndex: 10, maxWidth: 900, margin: '0 auto', padding: '100px 24px 80px' }}>
 
@@ -164,8 +232,7 @@ export default function Roadmaps() {
                 }}>
                     {roadmaps.map((rm, i) => {
                         const totalTopics = rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0
-                        const progress = getStandaloneProgress(rm.topic)
-                        const doneCount = Object.keys(progress).length
+                        const doneCount = countDoneForRoadmap(rm, progressMap)
                         const percent = totalTopics > 0 ? Math.round((doneCount / totalTopics) * 100) : 0
                         const isComplete = percent === 100 && totalTopics > 0
 

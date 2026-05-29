@@ -1,4 +1,3 @@
-import Navbar from '../components/Navbar.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import AuthModal from '../components/AuthModal.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
@@ -6,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
-import { getAllRoadmaps, timeAgo, getStandaloneProgress } from '../utils/storage.js'
+import { getAllRoadmaps, timeAgo, getProgress } from '../utils/storage.js'
 
 
 const SUGGESTIONS = ['Python', 'React', 'Machine Learning', 'UI/UX Design', 'Web3', 'Data Science']
@@ -33,27 +32,36 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
 
-  const { user, signOut, loading: authLoading } = useAuth()
+  const { user, signOut } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
 
   const [recentRoadmaps, setRecentRoadmaps] = useState([])
-  const [globalStats, setGlobalStats] = useState({ total: 0, completedTopics: 0 })
+  const [recentProgress, setRecentProgress] = useState({})
 
   useEffect(() => {
-    if (authLoading) return
     getAllRoadmaps().then(all => setRecentRoadmaps(all.slice(0, 3)))
-  }, [authLoading, user])
+  }, [user?.id])
 
+  const [globalStats, setGlobalStats] = useState({ total: 0, completedTopics: 0 })
   useEffect(() => {
-    if (authLoading) return
-    getAllRoadmaps().then(all => {
-      const completedTopics = all.reduce((sum, rm) => {
-        return sum + Object.keys(getStandaloneProgress(rm.topic)).length
-      }, 0)
+    async function load() {
+      const all = await getAllRoadmaps()
+      let completedTopics = 0
+      const progMap = {}
+      await Promise.all(all.map(async rm => {
+        const prog = await getProgress(rm.topic)
+        progMap[rm.topic] = prog
+        const phases = rm.data?.phases || []
+        completedTopics += phases.reduce((sum, phase) => {
+          return sum + (phase.topics || []).filter(t => prog[`${phase.id}_${t.id}`]).length
+        }, 0)
+      }))
+      setRecentProgress(progMap)
       setGlobalStats({ total: all.length, completedTopics })
-    })
-  }, [authLoading, user])
+    }
+    load()
+  }, [user?.id])
 
   function go(q) {
     const t = (q || query).trim()
@@ -74,11 +82,144 @@ export default function Home() {
       <div style={{ position: 'fixed', bottom: -150, right: -100, width: 500, height: 500, borderRadius: '50%', pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle,rgba(139,92,246,0.09),transparent 70%)' }} />
 
       {/* Navbar */}
-      <Navbar rightContent={
-        // pass page-specific content like progress pill here
-        // if nothing needed just pass null
-        null
-      } />
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 40px',
+        background: 'rgba(8,8,16,0.8)', backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 9,
+            background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
+          }}>🧭</div>
+          <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)' }}>
+            Path <span style={{ color: '#60A5FA' }}>AI</span>
+          </span>
+        </div>
+
+        {/* Nav links */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {[
+            { label: 'Home', path: '/' },
+            { label: 'Roadmaps', path: '/roadmaps' },
+            { label: 'Demandable', path: '/templates' },
+          ].map(link => (
+            <button
+              key={link.label}
+              onClick={() => navigate(link.path)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'DM Sans', fontSize: '0.9rem',
+                color: link.path === '/' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)',
+                padding: '6px 14px', borderRadius: 8, transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.9)'}
+              onMouseLeave={e => e.currentTarget.style.color = link.path === '/' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.4)'}
+            >{link.label}</button>
+          ))}
+        </div>
+
+        {globalStats.total > 0 && (
+          <button
+            onClick={() => navigate('/roadmaps')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(96,165,250,0.3)'
+              e.currentTarget.style.background = 'rgba(96,165,250,0.08)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+            }}
+          >
+            <span style={{ fontSize: 13 }}>🗺️</span>
+            <span style={{
+              fontFamily: 'Space Grotesk', fontWeight: 600,
+              fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)',
+            }}>
+              {globalStats.total} roadmap{globalStats.total !== 1 ? 's' : ''}
+            </span>
+            {globalStats.completedTopics > 0 && (
+              <>
+                <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.1)' }} />
+                <span style={{
+                  fontFamily: 'Space Grotesk', fontWeight: 600,
+                  fontSize: '0.78rem', color: '#10B981',
+                }}>
+                  {globalStats.completedTopics} ✓
+                </span>
+              </>
+            )}
+          </button>
+        )}
+        {/* Auth button */}
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 14px', borderRadius: 99,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: 99,
+                background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, color: 'white', fontWeight: 700,
+                fontFamily: 'Space Grotesk',
+              }}>
+                {user.email?.[0].toUpperCase()}
+              </div>
+              <span style={{
+                fontFamily: 'DM Sans', fontSize: '0.82rem',
+                color: 'rgba(255,255,255,0.5)',
+                maxWidth: 120, overflow: 'hidden',
+                textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {user.email}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowSignOutConfirm(true)}
+              style={{
+                padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                fontFamily: 'DM Sans', fontSize: '0.82rem',
+                color: 'rgba(255,255,255,0.35)',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
+            >Sign out</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuth(true)}
+            className="btn-primary"
+            style={{ padding: '8px 20px' }}
+          >
+            Sign in
+          </button>
+        )}
+
+        {/* Auth Modal */}
+        <div style={{
+          padding: '6px 16px', borderRadius: 99,
+          background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)',
+          fontFamily: 'Space Grotesk', fontSize: '0.78rem', color: '#60A5FA', fontWeight: 500,
+        }}>
+          ⚡ Developed by Shabbir
+        </div>
+      </nav>
 
       {/* Hero */}
       <div style={{
@@ -249,7 +390,10 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
             {recentRoadmaps.map((rm, i) => {
               const totalTopics = rm.data?.phases?.reduce((s, p) => s + (p.topics?.length || 0), 0) || 0
-              const doneCount = Object.keys(rm.progress || {}).length
+              const prog = recentProgress[rm.topic] || {}
+              const doneCount = (rm.data?.phases || []).reduce((sum, phase) => {
+                return sum + (phase.topics || []).filter(t => prog[`${phase.id}_${t.id}`]).length
+              }, 0)
               const percent = totalTopics > 0 ? Math.round((doneCount / totalTopics) * 100) : 0
 
               return (

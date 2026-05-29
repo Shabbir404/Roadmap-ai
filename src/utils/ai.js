@@ -77,18 +77,15 @@ Return ONLY valid JSON — no markdown, no backticks, no extra text.
 }
 
 Rules:
-- Generate exactly 4 phases (not more, not less)
-- Each phase has exactly 4 topics (not more, not less)
-- Generate exactly 4 career paths
-- Keep descriptions SHORT — one sentence maximum
-- Keep intro to 2 sentences maximum
+- Generate exactly 4 phases (not more)
+- Each phase has exactly 4 topics
+- Generate exactly 4 career paths relevant to this exact topic
 - Use standard double quotes in JSON. No trailing commas. No markdown.
 - difficulty: Easy / Medium / Hard
 - mathIntensity: Low / Medium / High
 - salary: realistic USD range
-- each phase emoji must be unique
-- each phase color must be a different hex color
-- IMPORTANT: Response must be complete valid JSON. Do not truncate.`
+- each phase emoji must be unique and relevant
+- each phase color must be different hex color`
 }
 
 function careerPrompt(topic, career) {

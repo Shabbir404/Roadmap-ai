@@ -1,21 +1,35 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { getProgress, saveProgress } from '../utils/storage.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
+
+function countCompleted(done, phases) {
+    if (!phases?.length) return 0
+    return phases.reduce((sum, phase) => {
+        const topics = phase.topics || []
+        const completed = topics.filter(t => done[`${phase.id}_${t.id}`]).length
+        return sum + completed
+    }, 0)
+}
 
 export function useProgress(topic, phases) {
     const [done, setDone] = useState({})
     const [loaded, setLoaded] = useState(false)
     const { user } = useAuth()
 
-    // Load progress when topic or user changes
     useEffect(() => {
         if (!topic) return
+        let cancelled = false
         setLoaded(false)
+
         getProgress(topic).then(saved => {
-            setDone(saved || {})
-            setLoaded(true)
+            if (!cancelled) {
+                setDone(saved || {})
+                setLoaded(true)
+            }
         })
-    }, [topic, user])
+
+        return () => { cancelled = true }
+    }, [topic, user?.id])
 
     const toggle = useCallback((phaseId, topicId) => {
         if (!loaded) return
@@ -24,7 +38,6 @@ export function useProgress(topic, phases) {
             const next = { ...prev }
             if (next[key]) delete next[key]
             else next[key] = true
-            // Save async — don't block UI
             saveProgress(topic, next).catch(err =>
                 console.error('Progress save error:', err)
             )
@@ -37,7 +50,7 @@ export function useProgress(topic, phases) {
     }, [done])
 
     const totalTopics = phases?.reduce((sum, p) => sum + (p.topics?.length || 0), 0) || 0
-    const doneCount = Object.keys(done).length
+    const doneCount = useMemo(() => countCompleted(done, phases), [done, phases])
     const percent = totalTopics > 0 ? Math.round((doneCount / totalTopics) * 100) : 0
 
     const phaseProgress = useCallback((phaseId, topics) => {
@@ -51,7 +64,7 @@ export function useProgress(topic, phases) {
 
     const reset = useCallback(() => {
         setDone({})
-        saveProgress(topic, {})
+        saveProgress(topic, {}).catch(err => console.error('Progress reset error:', err))
     }, [topic])
 
     return { toggle, isTopicDone, doneCount, totalTopics, percent, phaseProgress, reset, loaded }
