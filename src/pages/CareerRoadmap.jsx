@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
 import CareerRoadmapContent from '../components/CareerRoadmapContent.jsx'
-import NeuralBg from '../components/NeuralBg.jsx'
 import { getRoadmap, getAllRoadmaps } from '../utils/storage.js'
 
 function roadmapData(row) {
@@ -11,7 +10,7 @@ function roadmapData(row) {
 
 async function resolveCareer(topic, careerTitle, stateCareer) {
     if (stateCareer?.title && stateCareer.title.toLowerCase() === careerTitle.toLowerCase()) {
-        return { career: stateCareer, topic: topic || stateCareer.topic }
+        return { career: stateCareer, topic }
     }
 
     let resolvedTopic = topic
@@ -32,7 +31,6 @@ async function resolveCareer(topic, careerTitle, stateCareer) {
     const career = data?.careers?.find(
         c => c.title.toLowerCase() === careerTitle.toLowerCase()
     )
-
     return career ? { career, topic: resolvedTopic } : null
 }
 
@@ -56,7 +54,6 @@ export default function CareerRoadmap() {
         }
 
         let cancelled = false
-
         async function init() {
             setResolving(true)
             const result = await resolveCareer(topic, careerTitle, stateCareer)
@@ -69,7 +66,6 @@ export default function CareerRoadmap() {
             setResolvedTopic(result.topic)
             setResolving(false)
         }
-
         init()
         return () => { cancelled = true }
     }, [topic, careerTitle, fromTemplate, navigate, stateCareer])
@@ -81,44 +77,23 @@ export default function CareerRoadmap() {
     }
 
     return (
-        <div className="career-page-shell">
-            <NeuralBg />
-            <div className="page-orb page-orb--blue" />
-            <div className="page-orb page-orb--purple" />
-
-            <button
-                type="button"
-                className="career-page-dim"
-                onClick={backToRoadmap}
-                aria-label="Back to roadmap"
-            />
-
-            <div className="career-page-panel">
-                <div className="sheet-handle" />
-
-                {resolving || !career ? (
-                    <div style={{ padding: '24px 28px 48px' }}>
-                        {[1, 2, 3].map(i => (
-                            <div key={i} style={{ marginBottom: 12 }}>
-                                <div className="skeleton" style={{ height: 64, borderRadius: 16 }} />
-                            </div>
-                        ))}
-                        <div style={{
-                            textAlign: 'center', marginTop: 20, fontFamily: 'DM Sans',
-                            fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)',
-                        }}>
-                            Loading career roadmap…
+        <div className="career-standalone">
+            {resolving || !career ? (
+                <div style={{ padding: '24px 28px 48px' }}>
+                    {[1, 2, 3].map(i => (
+                        <div key={i} style={{ marginBottom: 12 }}>
+                            <div className="skeleton" style={{ height: 64, borderRadius: 16 }} />
                         </div>
-                    </div>
-                ) : (
-                    <CareerRoadmapContent
-                        career={career}
-                        topic={resolvedTopic}
-                        onClose={backToRoadmap}
-                        fromTemplate={fromTemplate}
-                    />
-                )}
-            </div>
+                    ))}
+                </div>
+            ) : (
+                <CareerRoadmapContent
+                    career={career}
+                    topic={resolvedTopic}
+                    onClose={backToRoadmap}
+                    fromTemplate={fromTemplate}
+                />
+            )}
         </div>
     )
 }

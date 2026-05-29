@@ -857,56 +857,10 @@ body,
   }
 }
 
-/* ── Career route: separate page, original sheet panel design ── */
-.career-page-shell {
+/* Career path: same boxes as sheet, normal full page (not popup) */
+.career-standalone {
   min-height: 100vh;
-  min-height: 100dvh;
-  background: #080810;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  overflow: hidden;
-}
-
-.career-page-dim {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  border: none;
-  cursor: pointer;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  animation: fadeIn 0.3s ease;
-}
-
-.career-page-panel {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 780px;
   background: #0E0E1A;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 28px 28px 0 0;
-  max-height: 92vh;
-  max-height: 92dvh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  animation: slideUp 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-  box-shadow: 0 -12px 48px rgba(0, 0, 0, 0.45);
-}
-
-@media (min-width: 781px) {
-  .career-page-shell {
-    justify-content: center;
-    padding: 32px 20px;
-  }
-
-  .career-page-panel {
-    border-radius: 28px;
-    max-height: min(88vh, 900px);
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
-  }
+  max-width: 780px;
+  margin: 0 auto;
 }
