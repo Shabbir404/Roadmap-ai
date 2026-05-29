@@ -154,9 +154,13 @@ export default function Result() {
   }, [topic, retryKey, isTemplateSource, user])
 
   function openCareer(career) {
-    const q = new URLSearchParams({ topic: data?.topic || topic, career: career.title })
+    const t = data?.topic || topic
+    const q = new URLSearchParams({
+      topic: t,
+      career: career.title,
+    })
     if (isTemplateSource) q.set('source', 'template')
-    navigate(`/career?${q.toString()}`)
+    navigate(`/career?${q.toString()}`, { state: { career } })
   }
 
   function handleShare() {
