@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { saveCareerRoadmap, getCareerRoadmap } from '../utils/storage.js'
 import { generateCareerRoadmap } from '../utils/ai.js'
+import { getTemplateCareerRoadmap } from '../data/templateCareerRoadmaps.js'
 import { useProgress } from '../hooks/useProgress.js'
 
 function PhaseRow({ phase, topic, index, isTopicDone, onToggle, phaseProgress }) {
@@ -163,6 +164,17 @@ export default function CareerRoadmapContent({ career, topic, fromTemplate = fal
       setLoading(true)
       setLoadError(null)
       try {
+        const curated = getTemplateCareerRoadmap(topic, career.title)
+        if (curated) {
+          setData(curated)
+          try {
+            await saveCareerRoadmap(topic, career.title, curated)
+          } catch (saveErr) {
+            if (!saveErr.localSaved) throw saveErr
+          }
+          return
+        }
+
         const cached = await getCareerRoadmap(topic, career.title)
         if (cancelled) return
 

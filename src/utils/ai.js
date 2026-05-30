@@ -127,8 +127,12 @@ export async function generateResult(topic) {
     return callAI(buildPrompt(topic))
 }
 
+import { getTemplateCareerRoadmap } from '../data/templateCareerRoadmaps.js'
+
 /** Career roadmaps are generated locally — no API, unlimited & free. */
 export async function generateCareerRoadmap(topic, career) {
+    const curated = getTemplateCareerRoadmap(topic, career)
+    if (curated) return curated
     return getMockCareerRoadmap(topic, career)
 }
 
