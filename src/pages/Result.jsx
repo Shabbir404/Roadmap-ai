@@ -647,7 +647,9 @@ export default function Result() {
                 fontFamily: 'DM Sans', fontSize: '0.88rem',
                 color: 'rgba(255,255,255,0.35)', marginBottom: 28, lineHeight: 1.6,
               }}>
-                Click any career to get a dedicated roadmap for that exact goal — free, unlimited, no login required.
+                {isTemplateSource
+                  ? 'Click any career for a free curated roadmap — unlimited, no login required.'
+                  : 'Click any career to generate a dedicated AI roadmap tailored to that role.'}
               </p>
               <div style={{
                 display: 'grid',

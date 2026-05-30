@@ -1,3 +1,5 @@
+import { getTemplateCareerRoadmap } from '../data/templateCareerRoadmaps.js'
+
 // const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY || ''
 
 // ─── Core API call ────────────────────────────────────────
@@ -127,13 +129,24 @@ export async function generateResult(topic) {
     return callAI(buildPrompt(topic))
 }
 
-import { getTemplateCareerRoadmap } from '../data/templateCareerRoadmaps.js'
+/** Detect legacy generic mock career roadmaps cached before API routing. */
+export function isGenericMockCareerRoadmap(data) {
+    const firstPhase = data?.phases?.[0]?.title
+    return firstPhase === 'Core Skills for This Role'
+}
 
-/** Career roadmaps are generated locally — no API, unlimited & free. */
-export async function generateCareerRoadmap(topic, career) {
-    const curated = getTemplateCareerRoadmap(topic, career)
-    if (curated) return curated
-    return getMockCareerRoadmap(topic, career)
+/**
+ * Template careers → curated local JSON.
+ * AI-generated roadmaps → Gemini via /api/generate.
+ * @param {{ fromTemplate?: boolean }} [options]
+ */
+export async function generateCareerRoadmap(topic, career, options = {}) {
+    if (options.fromTemplate) {
+        const curated = getTemplateCareerRoadmap(topic, career)
+        if (curated) return curated
+        throw new Error(`No template career roadmap for "${career}".`)
+    }
+    return callAI(careerPrompt(topic, career))
 }
 
 // ─── Mock data ────────────────────────────────────────────

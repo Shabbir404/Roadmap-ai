@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { saveCareerRoadmap, getCareerRoadmap } from '../utils/storage.js'
-import { generateCareerRoadmap } from '../utils/ai.js'
+import { generateCareerRoadmap, isGenericMockCareerRoadmap } from '../utils/ai.js'
 import { getTemplateCareerRoadmap } from '../data/templateCareerRoadmaps.js'
 import { useProgress } from '../hooks/useProgress.js'
 
@@ -164,8 +164,12 @@ export default function CareerRoadmapContent({ career, topic, fromTemplate = fal
       setLoading(true)
       setLoadError(null)
       try {
-        const curated = getTemplateCareerRoadmap(topic, career.title)
-        if (curated) {
+        if (fromTemplate) {
+          const curated = getTemplateCareerRoadmap(topic, career.title)
+          if (!curated) {
+            throw new Error(`Template career roadmap not found for "${career.title}".`)
+          }
+          if (cancelled) return
           setData(curated)
           try {
             await saveCareerRoadmap(topic, career.title, curated)
@@ -178,12 +182,12 @@ export default function CareerRoadmapContent({ career, topic, fromTemplate = fal
         const cached = await getCareerRoadmap(topic, career.title)
         if (cancelled) return
 
-        if (cached?.data) {
+        if (cached?.data && !isGenericMockCareerRoadmap(cached.data)) {
           setData(cached.data)
           return
         }
 
-        const d = await generateCareerRoadmap(topic, career.title)
+        const d = await generateCareerRoadmap(topic, career.title, { fromTemplate: false })
         if (cancelled) return
         setData(d)
         try {
@@ -201,6 +205,20 @@ export default function CareerRoadmapContent({ career, topic, fromTemplate = fal
     load()
     return () => { cancelled = true }
   }, [topic, career.title, fromTemplate])
+
+  async function retryGenerate() {
+    setLoadError(null)
+    setLoading(true)
+    try {
+      const d = await generateCareerRoadmap(topic, career.title, { fromTemplate })
+      setData(d)
+      await saveCareerRoadmap(topic, career.title, d)
+    } catch (e) {
+      setLoadError(e?.message || 'Failed again')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <>
@@ -237,9 +255,16 @@ export default function CareerRoadmapContent({ career, topic, fromTemplate = fal
               textAlign: 'center', marginTop: 20, fontFamily: 'DM Sans',
               fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)',
             }}>
-              Building your {career.title} career path…
-              <div style={{ fontSize: '0.75rem', marginTop: 6, color: 'rgba(16,185,129,0.6)' }}>
-                Free · generated locally · unlimited
+              {fromTemplate
+                ? `Loading your ${career.title} career path…`
+                : `AI is building your ${career.title} roadmap…`}
+              <div style={{
+                fontSize: '0.75rem', marginTop: 6,
+                color: fromTemplate ? 'rgba(16,185,129,0.6)' : 'rgba(167,139,250,0.6)',
+              }}>
+                {fromTemplate
+                  ? 'Free · from template · unlimited'
+                  : 'Powered by AI · tailored to this career'}
               </div>
             </div>
           </div>
@@ -251,17 +276,7 @@ export default function CareerRoadmapContent({ career, topic, fromTemplate = fal
             }}>{loadError}</p>
             <button
               type="button"
-              onClick={() => {
-                setLoadError(null)
-                setLoading(true)
-                generateCareerRoadmap(topic, career.title)
-                  .then(async d => {
-                    setData(d)
-                    await saveCareerRoadmap(topic, career.title, d)
-                  })
-                  .catch(e => setLoadError(e?.message || 'Failed again'))
-                  .finally(() => setLoading(false))
-              }}
+              onClick={retryGenerate}
               style={{
                 padding: '10px 20px', borderRadius: 10, cursor: 'pointer',
                 background: 'rgba(96,165,250,0.15)', border: '1px solid rgba(96,165,250,0.3)',
