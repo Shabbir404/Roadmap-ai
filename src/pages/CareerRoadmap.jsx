@@ -5,6 +5,8 @@ import Footer from '../components/Footer.jsx'
 import NeuralBg from '../components/NeuralBg.jsx'
 import CareerRoadmapContent from '../components/CareerRoadmapContent.jsx'
 import { getRoadmap, getAllRoadmaps } from '../utils/storage.js'
+import { usePageMeta } from '../hooks/usePageMeta.js'
+import { buildTitle, truncateDescription } from '../utils/seo.js'
 
 function roadmapData(row) {
     if (!row) return null
@@ -49,6 +51,22 @@ export default function CareerRoadmap() {
     const [career, setCareer] = useState(null)
     const [resolvedTopic, setResolvedTopic] = useState(topic)
     const [resolving, setResolving] = useState(true)
+
+    const displayTopic = resolvedTopic || topic
+    usePageMeta({
+        title: careerTitle && displayTopic
+            ? buildTitle(`${careerTitle} Career Roadmap`)
+            : buildTitle('Career Roadmap'),
+        description: truncateDescription(
+            career?.description ||
+            (careerTitle && displayTopic
+                ? `Step-by-step career roadmap to become a ${careerTitle} using ${displayTopic}. Free phases, topics, and progress tracking.`
+                : undefined)
+        ),
+        path: careerTitle && displayTopic
+            ? `/career?topic=${encodeURIComponent(displayTopic)}&career=${encodeURIComponent(careerTitle)}${fromTemplate ? '&source=template' : ''}`
+            : '/career',
+    })
 
     useEffect(() => {
         if (!topic || !careerTitle) {

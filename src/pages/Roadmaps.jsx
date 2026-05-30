@@ -5,6 +5,8 @@ import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { getAllRoadmaps, deleteRoadmap, timeAgo, getProgress } from '../utils/storage.js'
+import { usePageMeta } from '../hooks/usePageMeta.js'
+import { buildTitle } from '../utils/seo.js'
 
 function countDoneForRoadmap(rm, progressMap) {
     const done = progressMap[rm.topic] || {}
@@ -20,6 +22,12 @@ export default function Roadmaps() {
     const [progressMap, setProgressMap] = useState({})
     const navigate = useNavigate()
     const { user } = useAuth()
+
+    usePageMeta({
+        title: buildTitle('My Roadmaps'),
+        description: 'View and continue your saved AI learning roadmaps. Track progress across all your skills in one place.',
+        path: '/roadmaps',
+    })
 
     useEffect(() => {
         getAllRoadmaps().then(data => setRoadmaps(data || []))

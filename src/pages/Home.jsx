@@ -6,6 +6,8 @@ import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
 import { getAllRoadmaps, timeAgo, getProgress } from '../utils/storage.js'
 import { getRoadmapQuota, migrateLegacyLimits, getQuotaEventName } from '../utils/generationLimits.js'
+import { usePageMeta } from '../hooks/usePageMeta.js'
+import { DEFAULT_DESCRIPTION, DEFAULT_TITLE } from '../utils/seo.js'
 
 
 const SUGGESTIONS = ['Python', 'React', 'Machine Learning', 'UI/UX Design', 'Web3', 'Data Science']
@@ -32,6 +34,12 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
   const { user } = useAuth()
+
+  usePageMeta({
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    path: '/',
+  })
 
   const [recentRoadmaps, setRecentRoadmaps] = useState([])
   const [recentProgress, setRecentProgress] = useState({})

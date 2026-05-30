@@ -5,11 +5,20 @@ import Navbar from '../components/Navbar.jsx'
 import Footer from '../components/Footer.jsx'
 import { TEMPLATES, templateToRoadmapData } from '../data/templates.js'
 import { saveRoadmapLocal, hasLocalRoadmap } from '../utils/storage.js'
+import { usePageMeta } from '../hooks/usePageMeta.js'
+import { buildTitle } from '../utils/seo.js'
 
 const ALL_TAGS = ['All', 'Beginner Friendly', 'Programming', 'Web Dev', 'AI', 'Data Science', 'Design', 'Security', 'Mobile', 'Advanced']
 
 export default function Templates() {
     const navigate = useNavigate()
+
+    usePageMeta({
+        title: buildTitle('Free Learning Templates'),
+        description: 'Pre-built roadmaps for Python, React, Machine Learning, UI/UX, cybersecurity, and more. Unlimited, free, and no login required.',
+        path: '/templates',
+    })
+
     const [activeTag, setActiveTag] = useState('All')
     const [savedTopics, setSavedTopics] = useState(() => new Set())
 

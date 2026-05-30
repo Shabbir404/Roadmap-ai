@@ -9,8 +9,10 @@ import Templates from './pages/Templates.jsx'
 import CareerRoadmap from './pages/CareerRoadmap.jsx'
 import './index.css'
 import { migrateLegacyLimits } from './utils/generationLimits.js'
+import { applyPageMeta } from './utils/seo.js'
 
 migrateLegacyLimits()
+applyPageMeta()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

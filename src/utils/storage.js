@@ -128,12 +128,7 @@ export async function getRoadmap(topic) {
 
 // ─── Get all roadmaps ─────────────────────────────────────
 export async function getAllRoadmaps() {
-    const { data: { session } } = await supabase.auth.getSession()
-    console.log('Session token:', session?.access_token ? 'EXISTS' : 'MISSING')
-    console.log('User:', session?.user?.email)
-
     const currentUser = await getUser()
-    console.log('getUser result:', currentUser?.email)
 
     if (currentUser) {
         const { data, error } = await supabase

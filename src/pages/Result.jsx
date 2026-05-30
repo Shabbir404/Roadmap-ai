@@ -19,6 +19,8 @@ import {
   getRoadmapQuota,
   migrateLegacyLimits,
 } from '../utils/generationLimits.js'
+import { usePageMeta } from '../hooks/usePageMeta.js'
+import { buildTitle, truncateDescription } from '../utils/seo.js'
 
 function Skeleton() {
   return (
@@ -54,6 +56,19 @@ export default function Result() {
   const [retryKey, setRetryKey] = useState(0)
   const [showAuth, setShowAuth] = useState(false)
   const { user } = useAuth()
+
+  const metaTopic = data?.topic || topic
+  usePageMeta({
+    title: metaTopic ? buildTitle(`${metaTopic} Learning Roadmap`) : buildTitle('Learning Roadmap'),
+    description: truncateDescription(
+      data?.intro ||
+      (metaTopic
+        ? `Structured learning roadmap for ${metaTopic} with phased topics, YouTube resources, and career paths.`
+        : undefined)
+    ),
+    path: metaTopic ? `/result?topic=${encodeURIComponent(metaTopic)}` : '/result',
+    noIndex: isReadOnly,
+  })
 
   useEffect(() => {
     if (user && limitReason === 'anon_exhausted') {

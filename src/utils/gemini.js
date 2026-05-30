@@ -1,5 +1,4 @@
 const API_KEY = ''
-console.log('API KEY loaded:', API_KEY ? 'YES ✓' : 'NO — check .env file')
 
 
 // ─── Prompt ───────────────────────────────────────────────
