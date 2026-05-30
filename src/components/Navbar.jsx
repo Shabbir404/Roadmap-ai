@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import AuthModal from './AuthModal.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
+import QuotaBadge from './QuotaBadge.jsx'
 
-export default function Navbar({ rightContent }) {
+export default function Navbar({ rightContent, hideQuota = false }) {
     const navigate = useNavigate()
     const location = useLocation()
     const { user, signOut } = useAuth()
@@ -62,6 +63,11 @@ export default function Navbar({ rightContent }) {
                     </nav>
 
                     <div className="app-navbar-actions">
+                        {!hideQuota && (
+                            <div className="desktop-nav">
+                                <QuotaBadge compact />
+                            </div>
+                        )}
                         {rightContent && (
                             <div className="app-navbar-extra desktop-nav">{rightContent}</div>
                         )}
@@ -113,6 +119,11 @@ export default function Navbar({ rightContent }) {
                             </button>
                         ))}
                     </nav>
+                    {!hideQuota && (
+                        <div className="app-navbar-mobile-extra">
+                            <QuotaBadge />
+                        </div>
+                    )}
                     {rightContent && <div className="app-navbar-mobile-extra">{rightContent}</div>}
                     <div className="app-navbar-mobile-auth">
                         {user ? (

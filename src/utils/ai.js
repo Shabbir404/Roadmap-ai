@@ -127,8 +127,9 @@ export async function generateResult(topic) {
     return callAI(buildPrompt(topic))
 }
 
+/** Career roadmaps are generated locally — no API, unlimited & free. */
 export async function generateCareerRoadmap(topic, career) {
-    return callAI(careerPrompt(topic, career))
+    return getMockCareerRoadmap(topic, career)
 }
 
 // ─── Mock data ────────────────────────────────────────────

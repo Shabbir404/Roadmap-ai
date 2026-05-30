@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import NeuralBg from '../components/NeuralBg.jsx'
 import Footer from '../components/Footer.jsx'
 import { getAllRoadmaps, timeAgo, getProgress } from '../utils/storage.js'
+import { getRoadmapQuota, migrateLegacyLimits, getQuotaEventName } from '../utils/generationLimits.js'
 
 
 const SUGGESTIONS = ['Python', 'React', 'Machine Learning', 'UI/UX Design', 'Web3', 'Data Science']
@@ -34,6 +35,18 @@ export default function Home() {
 
   const [recentRoadmaps, setRecentRoadmaps] = useState([])
   const [recentProgress, setRecentProgress] = useState({})
+  const [quotaHint, setQuotaHint] = useState('')
+
+  useEffect(() => {
+    migrateLegacyLimits()
+    getRoadmapQuota(user).then(q => setQuotaHint(q.label))
+  }, [user])
+
+  useEffect(() => {
+    const refresh = () => getRoadmapQuota(user).then(q => setQuotaHint(q.label))
+    window.addEventListener(getQuotaEventName(), refresh)
+    return () => window.removeEventListener(getQuotaEventName(), refresh)
+  }, [user])
 
   useEffect(() => {
     getAllRoadmaps().then(all => setRecentRoadmaps(all.slice(0, 3)))
@@ -140,6 +153,13 @@ export default function Home() {
             ✦ Generate
           </button>
         </div>
+
+        {quotaHint && (
+          <p className="fu3 home-quota-hint">
+            {quotaHint}
+            <span className="home-quota-hint-extra"> · Templates & career paths unlimited</span>
+          </p>
+        )}
 
         {/* Suggestions */}
         <div className="fu4" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 20, justifyContent: 'center' }}>

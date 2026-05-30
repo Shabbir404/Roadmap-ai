@@ -52,14 +52,8 @@ export default function Result() {
   const [limitReason, setLimitReason] = useState(null)
   const [genError, setGenError] = useState(null)
   const [retryKey, setRetryKey] = useState(0)
-  const [quotaLabel, setQuotaLabel] = useState('')
   const [showAuth, setShowAuth] = useState(false)
   const { user } = useAuth()
-
-  useEffect(() => {
-    migrateLegacyLimits()
-    getRoadmapQuota(user).then(q => setQuotaLabel(q.label))
-  }, [user])
 
   useEffect(() => {
     if (user && limitReason === 'anon_exhausted') {
@@ -139,7 +133,6 @@ export default function Result() {
         setCachedAt(Date.now())
         setLoading(false)
         const q = await getRoadmapQuota(user)
-        setQuotaLabel(q.label)
         showToast(`✨ Roadmap saved! ${q.label}.`, 'success')
       } catch (e) {
         console.error('Roadmap load/generate failed:', e)
@@ -202,9 +195,6 @@ export default function Result() {
 
   const navRight = (
     <div className="result-nav-right">
-      {!loading && !isReadOnly && !isTemplateSource && quotaLabel && (
-        <span className="nav-quota-label">{quotaLabel}</span>
-      )}
       {!loading && totalTopics > 0 && (
         <div className="nav-progress-pill">
           <div className="nav-progress-bar">
@@ -338,7 +328,7 @@ export default function Result() {
               color: 'rgba(255,255,255,0.9)',
               letterSpacing: '-0.03em', marginBottom: 12,
             }}>
-              {limitReason === 'anon_exhausted' ? 'Sign in to continue' : 'Free limit reached'}
+              {limitReason === 'anon_exhausted' ? 'Sign in to continue' : 'No generations left'}
             </h2>
             <p style={{
               fontFamily: 'DM Sans', fontSize: '1rem',
@@ -346,8 +336,8 @@ export default function Result() {
               maxWidth: 440, marginBottom: 32,
             }}>
               {limitReason === 'anon_exhausted'
-                ? 'You used your 1 free roadmap (and 1 career path) without signing in. Sign in with Google to unlock 2 more AI roadmaps. Career paths are unlimited after sign-in.'
-                : 'You used all 3 free AI roadmaps (1 before sign-in + 2 after). Templates are always free. Browse saved roadmaps or templates below.'}
+                ? 'You used your 1 free roadmap without signing in. Sign in with Google to unlock 2 more AI roadmaps. Career paths and templates are always free and unlimited.'
+                : 'You used all 3 free AI roadmaps (1 before sign-in + 2 after). Templates and career paths remain unlimited. Browse saved roadmaps or templates below.'}
             </p>
             {limitReason === 'anon_exhausted' && (
               <button
@@ -642,7 +632,7 @@ export default function Result() {
                 fontFamily: 'DM Sans', fontSize: '0.88rem',
                 color: 'rgba(255,255,255,0.35)', marginBottom: 28, lineHeight: 1.6,
               }}>
-                Click any career to get a dedicated roadmap for that exact goal.
+                Click any career to get a dedicated roadmap for that exact goal — free, unlimited, no login required.
               </p>
               <div style={{
                 display: 'grid',

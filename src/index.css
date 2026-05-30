@@ -680,6 +680,106 @@ body,
   white-space: nowrap;
 }
 
+.quota-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  max-width: 100%;
+}
+
+.quota-badge--available {
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.quota-badge--signin {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: rgba(96, 165, 250, 0.08);
+}
+
+.quota-badge--exhausted {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.quota-badge-dots {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.quota-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quota-dot--used {
+  background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+  border-color: transparent;
+}
+
+.quota-badge--exhausted .quota-dot--used {
+  background: rgba(245, 158, 11, 0.7);
+}
+
+.quota-badge-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.quota-badge-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+}
+
+.quota-badge-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.32);
+  white-space: nowrap;
+}
+
+.quota-badge-action {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+}
+
+.quota-badge--compact .quota-badge-sub {
+  display: none;
+}
+
+.home-quota-hint {
+  text-align: center;
+  margin-top: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  color: rgba(16, 185, 129, 0.75);
+}
+
+.home-quota-hint-extra {
+  color: rgba(255, 255, 255, 0.28);
+}
+
 .result-nav-right {
   display: flex;
   align-items: center;

@@ -64,7 +64,7 @@ export default function Templates() {
                         fontFamily: 'DM Sans', fontSize: '0.95rem',
                         color: 'rgba(255,255,255,0.35)', maxWidth: 480, margin: '0 auto',
                     }}>
-                        Learn more, Earn more
+                        Pre-built roadmaps — unlimited, free, no login. Never counts toward your AI quota.
                     </p>
                 </div>
 
